@@ -1,9 +1,11 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.implement;
 
 import com.example.autostore.dto.admin.BrandDTO;
 import com.example.autostore.model.Brand;
 import com.example.autostore.repository.IBrandRepository;
 
+import com.example.autostore.service.FileUploadService;
+import com.example.autostore.service.admin.interfaces.IBrandService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

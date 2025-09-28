@@ -213,4 +213,14 @@ public class Car {
     public void setFeatured(boolean featured) {
         isFeatured = featured;
     }
+    public Double getDailyPrice() {
+        if (pricing == null || pricing.isEmpty()) {
+            return null;
+        }
+        return pricing.stream()
+                .filter(p -> "day".equalsIgnoreCase(p.getUnit()))
+                .findFirst()
+                .map(p -> p.getPrice().doubleValue())
+                .orElse(null);
+    }
 }

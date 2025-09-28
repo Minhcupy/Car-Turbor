@@ -1,4 +1,4 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.interfaces;
 
 import com.example.autostore.Enum.BookingStatus;
 import com.example.autostore.model.Booking;

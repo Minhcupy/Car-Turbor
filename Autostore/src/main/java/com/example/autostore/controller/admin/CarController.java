@@ -3,9 +3,9 @@ package com.example.autostore.controller.admin;
 
 import com.example.autostore.dto.admin.CarRequestDTO;
 import com.example.autostore.dto.admin.CarResponseDTO;
-import com.example.autostore.service.IBrandService;
-import com.example.autostore.service.ICarService;
-import com.example.autostore.service.ICarTypeService;
+import com.example.autostore.service.admin.interfaces.IBrandService;
+import com.example.autostore.service.admin.interfaces.ICarService;
+import com.example.autostore.service.admin.interfaces.ICarTypeService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;

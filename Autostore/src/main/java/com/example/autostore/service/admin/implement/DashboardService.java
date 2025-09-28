@@ -1,4 +1,4 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.implement;
 
 import com.example.autostore.dto.admin.BookingPointDTO;
 import com.example.autostore.dto.admin.BrandRatioDTO;
@@ -7,6 +7,7 @@ import com.example.autostore.dto.admin.RevenuePointDTO;
 import com.example.autostore.repository.IBookingRepository;
 import com.example.autostore.repository.ICarRepository;
 import com.example.autostore.repository.IPaymentRepository;
+import com.example.autostore.service.admin.interfaces.IDashboardService;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;

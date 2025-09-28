@@ -1,9 +1,9 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.implement;
 
 import com.example.autostore.dto.admin.CarTypeDTO;
 import com.example.autostore.model.CarType;
 import com.example.autostore.repository.ICarTypeRepository;
-import com.example.autostore.service.ICarTypeService;
+import com.example.autostore.service.admin.interfaces.ICarTypeService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

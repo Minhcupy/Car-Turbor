@@ -18,6 +18,7 @@ public class BookingResponseDTO {
     private Integer carId;
     private String carName;
     private String carImage;
+    private Double price;
 
     // Thông tin thuê
     private String pickupLocation;
@@ -33,4 +34,6 @@ public class BookingResponseDTO {
     private String customerName;
     private String customerPhone;
     private String customerEmail;
+
+
 }

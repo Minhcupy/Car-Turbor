@@ -2,7 +2,7 @@ package com.example.autostore.controller.admin;
 
 import com.example.autostore.Enum.CustomerStatus;
 import com.example.autostore.model.Customer;
-import com.example.autostore.service.ICustomerService;
+import com.example.autostore.service.admin.interfaces.ICustomerService;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

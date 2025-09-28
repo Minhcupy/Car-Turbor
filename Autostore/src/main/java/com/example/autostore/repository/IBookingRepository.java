@@ -17,14 +17,10 @@ public interface IBookingRepository extends JpaRepository<Booking, Integer> {
     // Lọc theo trạng thái (PENDING, CONFIRMED, ...)
     List<Booking> findByStatus(BookingStatus status);
 
-    // Lọc theo ID khách hàng
-    List<Booking> findByCustomer_CustomerId(Integer customerId);
 
     // Lọc theo ID xe
     List<Booking> findByCar_CarId(Integer carId);
 
-    // Lọc theo trạng thái + khách hàng (ví dụ: tất cả booking PENDING của 1 khách)
-    List<Booking> findByCustomer_CustomerIdAndStatus(Integer customerId, BookingStatus status);
 
     Page<Booking> findByCustomer_CustomerNameContainingIgnoreCaseOrCar_CarNameContainingIgnoreCase(
             String customerName, String carName, Pageable pageable
@@ -57,6 +53,28 @@ public interface IBookingRepository extends JpaRepository<Booking, Integer> {
             @Param("brand") String brand,
             @Param("carType") String carType
     );
+
+    // Step 2: Kiểm tra xe có bị trùng lịch không
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE b.car.carId = :carId
+          AND b.status IN ('PENDING', 'CONFIRMED')
+          AND (
+              (b.pickupDate BETWEEN :pickupDate AND :returnDate)
+              OR (b.returnDate BETWEEN :pickupDate AND :returnDate)
+              OR (:pickupDate BETWEEN b.pickupDate AND b.returnDate)
+              OR (:returnDate BETWEEN b.pickupDate AND b.returnDate)
+          )
+    """)
+    List<Booking> checkCarAvailability(
+            @Param("carId") Integer carId,
+            @Param("pickupDate") LocalDate pickupDate,
+            @Param("returnDate") LocalDate returnDate
+    );
+    // Step 4: Lấy danh sách booking theo khách hàng
+    List<Booking> findByCustomer_CustomerId(Integer customerId);
+
+    List<Booking> findByCustomer_CustomerIdAndStatus(Integer customerId, BookingStatus status);
 
 
 }

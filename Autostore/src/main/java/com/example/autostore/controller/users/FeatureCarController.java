@@ -1,8 +1,7 @@
 package com.example.autostore.controller.users;
 
 import com.example.autostore.dto.user.FeaturedCarDTO;
-import com.example.autostore.service.CarServiceImpl;
-import com.example.autostore.service.ICarService;
+import com.example.autostore.service.admin.interfaces.ICarService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;

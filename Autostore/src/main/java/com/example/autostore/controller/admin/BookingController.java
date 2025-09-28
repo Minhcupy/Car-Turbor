@@ -5,7 +5,7 @@ import com.example.autostore.Enum.BookingStatus;
 import com.example.autostore.dto.admin.BookingDTO;
 import com.example.autostore.mapper.BookingMapper;
 import com.example.autostore.model.Booking;
-import com.example.autostore.service.IBookingService;
+import com.example.autostore.service.admin.interfaces.IBookingService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;

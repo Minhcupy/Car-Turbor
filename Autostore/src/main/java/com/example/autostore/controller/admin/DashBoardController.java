@@ -1,7 +1,7 @@
 package com.example.autostore.controller.admin;
 
 import com.example.autostore.dto.admin.DashboardReportDTO;
-import com.example.autostore.service.IDashboardService;
+import com.example.autostore.service.admin.interfaces.IDashboardService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 

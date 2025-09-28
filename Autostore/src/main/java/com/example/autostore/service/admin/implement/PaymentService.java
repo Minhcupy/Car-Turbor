@@ -1,15 +1,15 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.implement;
 
 import com.example.autostore.Enum.PaymentStatus;
 import com.example.autostore.model.Booking;
 import com.example.autostore.model.Payment;
 import com.example.autostore.repository.IBookingRepository;
 import com.example.autostore.repository.IPaymentRepository;
+import com.example.autostore.service.admin.interfaces.IPaymentService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
 @Service
 public class PaymentService implements IPaymentService {
     private final IPaymentRepository paymentRepository;

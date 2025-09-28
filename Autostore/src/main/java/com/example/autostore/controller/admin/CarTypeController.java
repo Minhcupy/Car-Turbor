@@ -1,7 +1,7 @@
 package com.example.autostore.controller.admin;
 
 import com.example.autostore.dto.admin.CarTypeDTO;
-import com.example.autostore.service.ICarTypeService;
+import com.example.autostore.service.admin.interfaces.ICarTypeService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

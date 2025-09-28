@@ -1,4 +1,4 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.interfaces;
 
 import com.example.autostore.dto.admin.CarTypeDTO;
 import org.springframework.data.domain.Page;

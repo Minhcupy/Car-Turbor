@@ -1,8 +1,8 @@
 package com.example.autostore.controller.admin;
 
 import com.example.autostore.dto.admin.BrandDTO;
-import com.example.autostore.service.BrandServiceImpl;
-import com.example.autostore.service.IBrandService;
+import com.example.autostore.service.admin.implement.BrandServiceImpl;
+import com.example.autostore.service.admin.interfaces.IBrandService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;

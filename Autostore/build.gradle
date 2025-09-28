@@ -13,8 +13,11 @@ java {
     }
 }
 
+
 repositories {
     mavenCentral()
+    // thêm repo snapshot để lấy springdoc 2.6.0-SNAPSHOT
+    maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
 }
 
 dependencies {
@@ -44,6 +47,8 @@ dependencies {
 
     implementation 'com.google.zxing:core:3.5.3'
     implementation 'com.google.zxing:javase:3.5.3'
+
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.8.13'
 
 }
 

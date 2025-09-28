@@ -1,4 +1,4 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.interfaces;
 
 
 
@@ -6,8 +6,6 @@ import com.example.autostore.Enum.PaymentStatus;
 import com.example.autostore.model.Payment;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-
-import java.util.List;
 
 public interface IPaymentService {
     Page<Payment> getPayments(String keyword, PaymentStatus status, Integer customerId, Pageable pageable);

@@ -1,9 +1,9 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.implement;
 
 import com.example.autostore.model.Booking;
 import com.example.autostore.Enum.BookingStatus;
 import com.example.autostore.repository.IBookingRepository;
-import com.example.autostore.service.IBookingService;
+import com.example.autostore.service.admin.interfaces.IBookingService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;

@@ -1,8 +1,9 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.implement;
 
 import com.example.autostore.Enum.CustomerStatus;
 import com.example.autostore.model.Customer;
 import com.example.autostore.repository.ICustomerRepository;
+import com.example.autostore.service.admin.interfaces.ICustomerService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;

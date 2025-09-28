@@ -1,6 +1,5 @@
-package com.example.autostore.service;
+package com.example.autostore.service.admin.implement;
 
-import com.example.autostore.Enum.CarStatus;
 import com.example.autostore.dto.admin.CarRequestDTO;
 import com.example.autostore.dto.admin.CarResponseDTO;
 import com.example.autostore.dto.user.FeaturedCarDTO;
@@ -11,15 +10,13 @@ import com.example.autostore.repository.IBrandRepository;
 import com.example.autostore.repository.ICarRepository;
 import com.example.autostore.repository.ICarTypeRepository;
 import com.example.autostore.service.FileUploadService;
-import com.example.autostore.service.ICarService;
+import com.example.autostore.service.admin.interfaces.ICarService;
 import jakarta.transaction.Transactional;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 
 @Service
