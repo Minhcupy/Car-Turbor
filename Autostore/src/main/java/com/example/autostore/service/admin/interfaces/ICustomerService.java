@@ -1,6 +1,7 @@
 package com.example.autostore.service.admin.interfaces;
 
 import com.example.autostore.Enum.CustomerStatus;
+import com.example.autostore.dto.admin.CustomerSummaryDTO;
 import com.example.autostore.model.Customer;
 import org.springframework.data.domain.Page;
 
@@ -11,4 +12,7 @@ public interface ICustomerService {
     Optional<Customer> getById(Integer id);
     void delete(Integer id);
     Customer updateStatus(Integer id, CustomerStatus status);
+
+    Page<CustomerSummaryDTO> getCustomerSummary(String keyword, int page, int size);
+    void deleteCustomer(Integer id);
 }

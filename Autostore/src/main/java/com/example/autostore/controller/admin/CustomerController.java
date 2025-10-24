@@ -1,6 +1,7 @@
 package com.example.autostore.controller.admin;
 
 import com.example.autostore.Enum.CustomerStatus;
+import com.example.autostore.dto.admin.CustomerSummaryDTO;
 import com.example.autostore.model.Customer;
 import com.example.autostore.service.admin.interfaces.ICustomerService;
 import org.springframework.data.domain.Page;
@@ -21,44 +22,17 @@ public class CustomerController {
         this.customerService = customerService;
     }
 
-    // ✅ Lấy danh sách có phân trang + tìm kiếm
-    @GetMapping("/page")
-    public Map<String, Object> getPage(
+    @GetMapping
+    public ResponseEntity<Page<CustomerSummaryDTO>> getCustomers(
             @RequestParam(defaultValue = "") String keyword,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int pageSize
-    ) {
-        Page<Customer> customerPage = customerService.getPage(keyword, page, pageSize);
-
-        return Map.of(
-                "content", customerPage.getContent(),
-                "totalElements", customerPage.getTotalElements(),
-                "totalPages", customerPage.getTotalPages(),
-                "page", page,
-                "pageSize", pageSize
-        );
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(customerService.getCustomerSummary(keyword, page, size));
     }
 
-    // ✅ Lấy chi tiết khách hàng
-    @GetMapping("/{id}")
-    public ResponseEntity<Customer> getById(@PathVariable Integer id) {
-        return customerService.getById(id)
-                .map(ResponseEntity::ok)
-                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy khách hàng với ID = " + id));
-    }
-
-    // ✅ Xóa khách hàng
     @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> delete(@PathVariable Integer id) {
-        customerService.delete(id);
-        return ResponseEntity.ok(Map.of("message", "Xóa khách hàng thành công"));
+    public ResponseEntity<Void> deleteCustomer(@PathVariable Integer id) {
+        customerService.deleteCustomer(id);
+        return ResponseEntity.noContent().build();
     }
-
-    @PutMapping("/{id}/status")
-    public ResponseEntity<Customer> updateStatus(
-            @PathVariable Integer id,
-            @RequestParam CustomerStatus status) {
-        return ResponseEntity.ok(customerService.updateStatus(id, status));
-    }
-
 }

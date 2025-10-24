@@ -3,9 +3,7 @@ package com.example.autostore.model;
 
 import com.example.autostore.Enum.CustomerStatus;
 import jakarta.persistence.*;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-import lombok.AllArgsConstructor;
+
 import lombok.Builder;
 
 import java.time.LocalDate;
@@ -13,7 +11,6 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "customers")
-@Data
 @Builder
 public class Customer {
 
@@ -43,9 +40,8 @@ public class Customer {
     private String license_number; // giấy phép lái xe
 
 
-    // Liên kết với tài khoản hệ thống
     @OneToOne
-    @JoinColumn(name = "userId", referencedColumnName = "userId", unique = true)
+    @JoinColumn(name = "user_id", referencedColumnName = "userId", unique = true)
     private AppUser appUser;
 
     // Thời gian tạo & cập nhật
@@ -176,4 +172,17 @@ public class Customer {
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
+    public String getId_number() {
+        return id_number;
+    }
+    public void setId_number(String id_number) {
+        this.id_number = id_number;
+    }
+    public String getLicense_number() {
+        return license_number;
+    }
+    public void setLicense_number(String license_number) {
+        this.license_number = license_number;
+    }
+
 }

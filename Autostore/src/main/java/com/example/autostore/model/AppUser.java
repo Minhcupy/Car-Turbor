@@ -1,54 +1,57 @@
 package com.example.autostore.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
+
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
-@Table(name = "Users")
-@Data
+@Table(name = "users")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 public class AppUser {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "userId")
     private Integer userId;
 
-    @Column(name = "userName", nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 50)
     private String userName;
 
-    @Column(name = "userPassword", nullable = false)
-    private String userPassword;
-
-    @Column(name = "userEmail", unique = true)
+    @Column(nullable = false, unique = true, length = 100)
     private String userEmail;
 
-    @Column(name = "userPhone")
+    @JsonIgnore
+    @Column(nullable = false)
+    private String userPassword;
+
+    @Column(length = 15)
     private String userPhone;
 
-    @Column(name = "userFullName")
     private String userFullName;
 
-    @Column(name = "userIsActive")
+    private String avatarUrl;
+
+    @Column(nullable = false)
     private Boolean userIsActive = true;
 
-    @ManyToOne
-    @JoinColumn(name = "roleId", referencedColumnName = "roleId")
-    private Role role;
+    // Roles
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "users_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
 
+
+    // Liên kết với Customer
     @OneToOne(mappedBy = "appUser", cascade = CascadeType.ALL)
     private Customer customer;
-
-    public AppUser() {}
-
-    public AppUser(AppUser appUser) {
-        this.userId = appUser.userId;
-        this.userName = appUser.userName;
-        this.userPassword = appUser.userPassword;
-        this.userEmail = appUser.userEmail;
-        this.userPhone = appUser.userPhone;
-        this.userFullName = appUser.userFullName;
-        this.userIsActive = appUser.userIsActive;
-    }
 
 
 }

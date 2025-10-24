@@ -3,7 +3,6 @@ package com.example.autostore.service.admin.implement;
 import com.example.autostore.dto.admin.BrandDTO;
 import com.example.autostore.model.Brand;
 import com.example.autostore.repository.IBrandRepository;
-
 import com.example.autostore.service.FileUploadService;
 import com.example.autostore.service.admin.interfaces.IBrandService;
 import org.springframework.data.domain.Page;
@@ -47,8 +46,8 @@ public class BrandServiceImpl implements IBrandService {
     }
 
     @Override
-    public BrandDTO findById(Integer id) {
-        return brandRepo.findById(id).map(this::toDTO).orElse(null);
+    public BrandDTO findById(Integer brandId) {
+        return brandRepo.findById(brandId).map(this::toDTO).orElse(null);
     }
 
     @Override
@@ -56,34 +55,12 @@ public class BrandServiceImpl implements IBrandService {
         Brand brand = new Brand();
         brand.setBrandName(dto.getBrandName());
         brand.setDescription(dto.getDescription());
-        brand.setLogoUrl(dto.getLogoUrl()); // nếu đã có URL sẵn
+        brand.setLogoUrl(dto.getLogoUrl());
         return toDTO(brandRepo.save(brand));
     }
 
     public BrandDTO createWithLogo(BrandDTO dto, MultipartFile logo) throws IOException {
         Brand brand = new Brand();
-        brand.setBrandName(dto.getBrandName());
-        brand.setDescription(dto.getDescription());
-
-        if (logo != null && !logo.isEmpty()) {
-            String url = fileUploadService.uploadFile(logo); // upload vào /uploads/
-            brand.setLogoUrl(url);
-        }
-
-        return toDTO(brandRepo.save(brand));
-    }
-
-    @Override
-    public BrandDTO update(Integer id, BrandDTO dto) {
-        Brand brand = brandRepo.findById(id).orElseThrow();
-        brand.setBrandName(dto.getBrandName());
-        brand.setDescription(dto.getDescription());
-        brand.setLogoUrl(dto.getLogoUrl());
-        return toDTO(brandRepo.save(brand));
-    }
-
-    public BrandDTO updateWithLogo(Integer id, BrandDTO dto, MultipartFile logo) throws IOException {
-        Brand brand = brandRepo.findById(id).orElseThrow();
         brand.setBrandName(dto.getBrandName());
         brand.setDescription(dto.getDescription());
 
@@ -96,23 +73,37 @@ public class BrandServiceImpl implements IBrandService {
     }
 
     @Override
-    public void delete(Integer id) {
-        brandRepo.deleteById(id);
+    public BrandDTO update(Integer brandId, BrandDTO dto) {
+        Brand brand = brandRepo.findById(brandId).orElseThrow();
+        brand.setBrandName(dto.getBrandName());
+        brand.setDescription(dto.getDescription());
+        brand.setLogoUrl(dto.getLogoUrl());
+        return toDTO(brandRepo.save(brand));
+    }
+
+    public BrandDTO updateWithLogo(Integer brandId, BrandDTO dto, MultipartFile logo) throws IOException {
+        Brand brand = brandRepo.findById(brandId).orElseThrow();
+        brand.setBrandName(dto.getBrandName());
+        brand.setDescription(dto.getDescription());
+
+        if (logo != null && !logo.isEmpty()) {
+            String url = fileUploadService.uploadFile(logo);
+            brand.setLogoUrl(url);
+        }
+
+        return toDTO(brandRepo.save(brand));
+    }
+
+    @Override
+    public void delete(Integer brandId) {
+        brandRepo.deleteById(brandId);
     }
 
     @Override
     public Page<BrandDTO> findByKeyword(String keyword, int page, int pageSize) {
         Pageable pageable = PageRequest.of(page - 1, pageSize);
-        Page<Brand> brandPage = brandRepo.findByBrandNameContainingIgnoreCase(keyword, pageable);
-
-        return brandPage.map(brand -> new BrandDTO(
-                brand.getBrandId(),
-                brand.getBrandName(),
-                brand.getDescription(),
-                brand.getLogoUrl()
-        ));
+        return (keyword == null || keyword.isBlank())
+                ? brandRepo.findAll(pageable).map(this::toDTO)
+                : brandRepo.findByBrandNameContainingIgnoreCase(keyword, pageable).map(this::toDTO);
     }
-
-
-
 }

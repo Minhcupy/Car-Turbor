@@ -1,0 +1,35 @@
+[
+  {
+    "id": 1,
+    "name": "John Smith",
+    "email": "john.smith@email.com",
+    "phone": "+1 (555) 123-4567",
+    "rentalCount": 5,
+    "lastRental": "2024-01-15",
+    "joinedDate": "2023-06-10",
+    "address": "123 Main St, New York, NY 10001",
+    "status": "active"
+  },
+  {
+    "id": 2,
+    "name": "Sarah Johnson",
+    "email": "sarah.johnson@email.com",
+    "phone": "+1 (555) 234-5678",
+    "rentalCount": 12,
+    "lastRental": "2024-01-20",
+    "joinedDate": "2023-03-15",
+    "address": "456 Oak Ave, Los Angeles, CA 90210",
+    "status": "active"
+  },
+  {
+    "id": 3,
+    "name": "Michael Brown",
+    "email": "michael.brown@email.com",
+    "phone": "+1 (555) 345-6789",
+    "rentalCount": 3,
+    "lastRental": "2024-01-10",
+    "joinedDate": "2023-11-20",
+    "address": "789 Pine St, Chicago, IL 60601",
+    "status": "active"
+  }
+]

@@ -52,7 +52,10 @@ public interface IPaymentRepository extends JpaRepository<Payment, Integer> {
             @Param("brand") String brand,
             @Param("carType") String carType
     );
-
+    List<Payment> findByBooking_BookingId(Integer bookingId);
+    // ✅ Doanh thu tháng hiện tại
+    @Query("SELECT SUM(p.amount) FROM Payment p WHERE MONTH(p.paymentDate) = MONTH(CURRENT_DATE) AND YEAR(p.paymentDate) = YEAR(CURRENT_DATE) AND p.status = 'SUCCESS'")
+    Double sumRevenueThisMonth();
     }
 
 

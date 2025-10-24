@@ -1,5 +1,6 @@
 package com.example.autostore.model;
 
+import com.example.autostore.Enum.ERole;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -12,30 +13,20 @@ public class Role {
     @Column(name = "roleId")
     private Integer roleId;
 
-    @Column(name = "roleName", nullable = false, unique = true)
-    private String roleName;
+    @Enumerated(EnumType.STRING)
+    @Column
+    private ERole name;
 
-    public Role() {
+    public ERole getName() {
+        return name;
     }
-
-    public Role(Integer roleId, String roleName) {
-        this.roleId = roleId;
-        this.roleName = roleName;
+    public void setName(ERole name) {
+        this.name = name;
     }
-
     public Integer getRoleId() {
         return roleId;
     }
-
     public void setRoleId(Integer roleId) {
         this.roleId = roleId;
-    }
-
-    public String getRoleName() {
-        return roleName;
-    }
-
-    public void setRoleName(String roleName) {
-        this.roleName = roleName;
     }
 }

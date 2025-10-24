@@ -30,11 +30,12 @@ public class BrandController {
         return service.findAll();
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<BrandDTO> getById(@PathVariable Integer id) {
-        BrandDTO dto = service.findById(id);
+    @GetMapping("/{brandId}")
+    public ResponseEntity<BrandDTO> getById(@PathVariable Integer brandId) {
+        BrandDTO dto = service.findById(brandId);
         return dto == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(dto);
     }
+
     @GetMapping("/page")
     public Map<String, Object> getBrandsPage(
             @RequestParam(defaultValue = "1") int page,
@@ -53,8 +54,6 @@ public class BrandController {
         return res;
     }
 
-
-    // Thêm brand (có thể upload logo)
     @PostMapping(consumes = {"multipart/form-data"})
     public ResponseEntity<BrandDTO> create(
             @Valid @ModelAttribute BrandDTO dto,
@@ -66,22 +65,21 @@ public class BrandController {
         return ResponseEntity.ok(service.create(dto));
     }
 
-    // Sửa brand (có thể update logo mới)
-    @PutMapping(value = "/{id}", consumes = {"multipart/form-data"})
+    @PutMapping(value = "/{brandId}", consumes = {"multipart/form-data"})
     public ResponseEntity<BrandDTO> update(
-            @PathVariable Integer id,
+            @PathVariable Integer brandId,
             @Valid @ModelAttribute BrandDTO dto,
             @RequestParam(value = "logo", required = false) MultipartFile logo
     ) throws IOException {
         if (logo != null && !logo.isEmpty()) {
-            return ResponseEntity.ok(((BrandServiceImpl) service).updateWithLogo(id, dto, logo));
+            return ResponseEntity.ok(((BrandServiceImpl) service).updateWithLogo(brandId, dto, logo));
         }
-        return ResponseEntity.ok(service.update(id, dto));
+        return ResponseEntity.ok(service.update(brandId, dto));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Map<String, String>> delete(@PathVariable Integer id) {
-        service.delete(id);
+    @DeleteMapping("/{brandId}")
+    public ResponseEntity<Map<String, String>> delete(@PathVariable Integer brandId) {
+        service.delete(brandId);
         return ResponseEntity.ok(Map.of("message", "Deleted successfully"));
     }
 }

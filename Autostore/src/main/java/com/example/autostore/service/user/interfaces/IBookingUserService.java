@@ -8,8 +8,9 @@ import java.util.List;
 
 public interface IBookingUserService {
     BookingPreviewDTO previewBooking(BookingRequestDTO dto);
-    BookingResponseDTO createBooking(BookingRequestDTO dto);
+    BookingResponseDTO createBooking(BookingRequestDTO dto, String username);
     List<BookingResponseDTO> getAllByCustomer(Integer customerId);
     BookingResponseDTO getBookingById(Integer bookingId);
+
     
 }

@@ -2,6 +2,7 @@ package com.example.autostore.repository;
 
 import com.example.autostore.Enum.BookingStatus;
 import com.example.autostore.model.Booking;
+import com.example.autostore.model.Customer;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -76,5 +77,29 @@ public interface IBookingRepository extends JpaRepository<Booking, Integer> {
 
     List<Booking> findByCustomer_CustomerIdAndStatus(Integer customerId, BookingStatus status);
 
+    List<Booking> findByCustomer(Customer customer);
+    // ✅ Đếm tổng số booking
+    @Query("SELECT COUNT(b) FROM Booking b")
+    long countBookings();
+
+    // ✅ Đếm số booking hôm nay
+    @Query("SELECT COUNT(b) FROM Booking b WHERE DATE(b.createdAt) = CURRENT_DATE")
+    long countBookingsToday();
+
+    // ✅ Đếm số booking trong tháng hiện tại
+    @Query("SELECT COUNT(b) FROM Booking b WHERE MONTH(b.createdAt) = MONTH(CURRENT_DATE) AND YEAR(b.createdAt) = YEAR(CURRENT_DATE)")
+    long countBookingsThisMonth();
+
+    // ✅ Đếm số booking đang pending
+    @Query("SELECT COUNT(b) FROM Booking b WHERE b.status = 'PENDING'")
+    long countPendingBookings();
+
+    // ✅ Tính tỉ lệ hủy (cancel rate)
+    @Query("SELECT (COUNT(CASE WHEN b.status = 'CANCELED' THEN 1 END) * 1.0 / COUNT(b)) * 100 FROM Booking b")
+    Double calcCancelRate();
+
+    // ✅ Lấy 5 booking mới nhất
+    @Query("SELECT b FROM Booking b JOIN FETCH b.customer JOIN FETCH b.car ORDER BY b.createdAt DESC")
+    List<Booking> findRecentBookings(Pageable pageable);
 
 }

@@ -30,12 +30,17 @@ public class CarTypeServiceImpl implements ICarTypeService {
 
     @Override
     public List<CarTypeDTO> findAll() {
-        return repo.findAll().stream().map(this::toDTO).collect(Collectors.toList());
+        return repo.findAll()
+                .stream()
+                .map(this::toDTO)
+                .collect(Collectors.toList());
     }
 
     @Override
-    public CarTypeDTO findById(Integer id) {
-        return repo.findById(id).map(this::toDTO).orElse(null);
+    public CarTypeDTO findById(Integer carTypeId) {
+        return repo.findById(carTypeId)
+                .map(this::toDTO)
+                .orElse(null);
     }
 
     @Override
@@ -46,15 +51,15 @@ public class CarTypeServiceImpl implements ICarTypeService {
     }
 
     @Override
-    public CarTypeDTO update(Integer id, CarTypeDTO dto) {
-        CarType ct = repo.findById(id).orElseThrow();
+    public CarTypeDTO update(Integer carTypeId, CarTypeDTO dto) {
+        CarType ct = repo.findById(carTypeId).orElseThrow();
         ct.setTypeName(dto.getTypeName());
         return toDTO(repo.save(ct));
     }
 
     @Override
-    public void delete(Integer id) {
-        repo.deleteById(id);
+    public void delete(Integer carTypeId) {
+        repo.deleteById(carTypeId);
     }
 
     @Override
@@ -63,6 +68,7 @@ public class CarTypeServiceImpl implements ICarTypeService {
         Page<CarType> result = (keyword == null || keyword.isBlank())
                 ? repo.findAll(pageable)
                 : repo.findByTypeNameContainingIgnoreCase(keyword, pageable);
+
         return result.map(this::toDTO);
     }
 }

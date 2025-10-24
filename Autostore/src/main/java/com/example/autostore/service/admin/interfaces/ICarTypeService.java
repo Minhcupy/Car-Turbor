@@ -7,9 +7,9 @@ import java.util.List;
 
 public interface ICarTypeService {
     List<CarTypeDTO> findAll();
-    CarTypeDTO findById(Integer id);
+    CarTypeDTO findById(Integer carTypeId);
     CarTypeDTO create(CarTypeDTO dto);
-    CarTypeDTO update(Integer id, CarTypeDTO dto);
-    void delete(Integer id);
+    CarTypeDTO update(Integer carTypeId, CarTypeDTO dto);
+    void delete(Integer carTypeId);
     Page<CarTypeDTO> findByKeyword(String keyword, int page, int pageSize);
 }

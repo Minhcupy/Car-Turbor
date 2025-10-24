@@ -3,15 +3,13 @@ package com.example.autostore.dto.admin;
 import jakarta.validation.constraints.NotBlank;
 
 public class BrandDTO {
-
     private Integer brandId;
 
     @NotBlank(message = "Tên thương hiệu không được để trống")
     private String brandName;
 
     private String description;
-
-    private String logoUrl; // chỉ lưu đường dẫn ảnh
+    private String logoUrl;
 
     public BrandDTO() {}
 
@@ -22,7 +20,7 @@ public class BrandDTO {
         this.logoUrl = logoUrl;
     }
 
-    // getters + setters
+    // Getters / Setters
     public Integer getBrandId() { return brandId; }
     public void setBrandId(Integer brandId) { this.brandId = brandId; }
 

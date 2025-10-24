@@ -1,7 +1,8 @@
 package com.example.autostore.dto.admin;
 
+import com.example.autostore.Enum.PaymentMethod;
 import com.example.autostore.Enum.PaymentStatus;
-import groovy.transform.builder.Builder;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,9 +18,11 @@ public class PaymentDTO {
     private String customerName;
     private String carName;
     private Double amount;
-    private String method;
+    private PaymentMethod method;
     private PaymentStatus status;   // giữ enum thay vì String
     private LocalDateTime paymentDate; // đồng bộ với entity
+
+
 
     public Integer getPaymentId() {
         return paymentId;
@@ -61,14 +64,6 @@ public class PaymentDTO {
         this.amount = amount;
     }
 
-    public String getMethod() {
-        return method;
-    }
-
-    public void setMethod(String method) {
-        this.method = method;
-    }
-
     public PaymentStatus getStatus() {
         return status;
     }
@@ -83,5 +78,12 @@ public class PaymentDTO {
 
     public void setPaymentDate(LocalDateTime paymentDate) {
         this.paymentDate = paymentDate;
+    }
+
+    public PaymentMethod getMethod() {
+        return method;
+    }
+    public void setMethod(PaymentMethod method) {
+        this.method = method;
     }
 }

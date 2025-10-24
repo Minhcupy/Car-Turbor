@@ -1,0 +1,35 @@
+[
+  {
+    "id": "TXN001",
+    "bookingId": "BK001",
+    "customerId": 1,
+    "customerName": "John Smith",
+    "amount": 100,
+    "method": "card",
+    "status": "deposit",
+    "date": "2024-01-18",
+    "type": "deposit"
+  },
+  {
+    "id": "TXN002",
+    "bookingId": "BK003",
+    "customerId": 3,
+    "customerName": "Michael Brown",
+    "amount": 360,
+    "method": "bank",
+    "status": "completed",
+    "date": "2024-01-28",
+    "type": "full_payment"
+  },
+  {
+    "id": "TXN003",
+    "bookingId": "BK002",
+    "customerId": 2,
+    "customerName": "Sarah Johnson",
+    "amount": 50,
+    "method": "cash",
+    "status": "deposit",
+    "date": "2024-01-21",
+    "type": "deposit"
+  }
+]

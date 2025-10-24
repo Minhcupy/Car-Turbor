@@ -8,6 +8,7 @@ import com.example.autostore.dto.user.CarItemDTO;
 import com.example.autostore.service.user.implement.BookingUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -26,8 +27,11 @@ public class BookingUserController {
 
 
     @PostMapping
-    public ResponseEntity<BookingResponseDTO> createBooking(@RequestBody BookingRequestDTO request) {
-        return ResponseEntity.ok(bookingService.createBooking(request));
+    public ResponseEntity<BookingResponseDTO> createBooking(
+            @RequestBody BookingRequestDTO request,
+            Authentication authentication) {
+        String username = authentication.getName(); // 👈 user hiện tại từ JWT
+        return ResponseEntity.ok(bookingService.createBooking(request, username));
     }
 
 

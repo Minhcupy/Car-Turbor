@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1,
+    "name": "Toyota",
+    "logo": "/placeholder.svg?height=50&width=100",
+    "carCount": 8
+  },
+  {
+    "id": 2,
+    "name": "Honda",
+    "logo": "/placeholder.svg?height=50&width=100",
+    "carCount": 6
+  },
+  {
+    "id": 3,
+    "name": "BMW",
+    "logo": "/placeholder.svg?height=50&width=100",
+    "carCount": 4
+  },
+  {
+    "id": 4,
+    "name": "Ford",
+    "logo": "/placeholder.svg?height=50&width=100",
+    "carCount": 5
+  },
+  {
+    "id": 5,
+    "name": "Tesla",
+    "logo": "/placeholder.svg?height=50&width=100",
+    "carCount": 3
+  }
+]

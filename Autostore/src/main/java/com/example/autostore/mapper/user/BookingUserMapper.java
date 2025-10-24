@@ -76,6 +76,10 @@ public class BookingUserMapper {
         dto.setCustomerName(booking.getCustomer().getCustomerName());
         dto.setCustomerPhone(booking.getCustomer().getCustomerPhone());
         dto.setCustomerEmail(booking.getCustomer().getCustomerEmail());
+        // Nếu booking có payment thì lấy paymentId đầu tiên
+        if (booking.getPayments() != null && !booking.getPayments().isEmpty()) {
+            dto.setPaymentId(booking.getPayments().get(0).getPaymentId());
+        }
 
         return dto;
     }

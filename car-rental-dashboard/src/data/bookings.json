@@ -1,0 +1,44 @@
+[
+  {
+    "id": "BK001",
+    "customerId": 1,
+    "customerName": "John Smith",
+    "carId": 2,
+    "carName": "Honda CR-V 2023",
+    "startDate": "2024-01-20",
+    "endDate": "2024-01-25",
+    "totalPrice": 325,
+    "deposit": 100,
+    "status": "approved",
+    "createdAt": "2024-01-18",
+    "qrCode": "/placeholder.svg?height=200&width=200"
+  },
+  {
+    "id": "BK002",
+    "customerId": 2,
+    "customerName": "Sarah Johnson",
+    "carId": 1,
+    "carName": "Toyota Camry 2023",
+    "startDate": "2024-01-22",
+    "endDate": "2024-01-24",
+    "totalPrice": 90,
+    "deposit": 50,
+    "status": "pending",
+    "createdAt": "2024-01-21",
+    "qrCode": "/placeholder.svg?height=200&width=200"
+  },
+  {
+    "id": "BK003",
+    "customerId": 3,
+    "customerName": "Michael Brown",
+    "carId": 3,
+    "carName": "BMW 3 Series 2024",
+    "startDate": "2024-01-25",
+    "endDate": "2024-01-28",
+    "totalPrice": 360,
+    "deposit": 150,
+    "status": "completed",
+    "createdAt": "2024-01-23",
+    "qrCode": "/placeholder.svg?height=200&width=200"
+  }
+]

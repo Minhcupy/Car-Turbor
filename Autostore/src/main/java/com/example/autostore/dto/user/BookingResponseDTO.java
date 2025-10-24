@@ -34,6 +34,7 @@ public class BookingResponseDTO {
     private String customerName;
     private String customerPhone;
     private String customerEmail;
+    private Integer paymentId;
 
 
 }

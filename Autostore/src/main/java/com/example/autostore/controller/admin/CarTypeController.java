@@ -31,21 +31,28 @@ public class CarTypeController {
         return dto == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(dto);
     }
 
+    // 🔹 Thêm mới
     @PostMapping
     public ResponseEntity<CarTypeDTO> create(@Valid @RequestBody CarTypeDTO dto) {
         return ResponseEntity.ok(service.create(dto));
     }
 
+    // 🔹 Cập nhật
     @PutMapping("/{id}")
     public ResponseEntity<CarTypeDTO> update(@PathVariable Integer id, @Valid @RequestBody CarTypeDTO dto) {
+        // đảm bảo id truyền vào DTO
+        dto.setCarTypeId(id);
         return ResponseEntity.ok(service.update(id, dto));
     }
 
+    // 🔹 Xóa
     @DeleteMapping("/{id}")
     public ResponseEntity<Map<String, String>> delete(@PathVariable Integer id) {
         service.delete(id);
         return ResponseEntity.ok(Map.of("message", "Deleted successfully"));
     }
+
+    // 🔹 Phân trang + tìm kiếm
     @GetMapping("/page")
     public Map<String, Object> getPage(
             @RequestParam(defaultValue = "") String keyword,
@@ -53,7 +60,6 @@ public class CarTypeController {
             @RequestParam(defaultValue = "10") int pageSize
     ) {
         var carTypePage = service.findByKeyword(keyword, page, pageSize);
-
         return Map.of(
                 "content", carTypePage.getContent(),
                 "totalElements", carTypePage.getTotalElements(),
@@ -63,4 +69,3 @@ public class CarTypeController {
         );
     }
 }
-

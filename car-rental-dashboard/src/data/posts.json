@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "title": "Top 5 Cars for Your Summer Road Trip",
+    "category": "Travel Tips",
+    "author": "Admin",
+    "status": "published",
+    "date": "2024-01-15",
+    "featuredImage": "/placeholder.svg?height=300&width=500",
+    "content": "Planning a summer road trip? Here are our top 5 recommended vehicles..."
+  },
+  {
+    "id": 2,
+    "title": "Electric Vehicle Benefits for City Driving",
+    "category": "Electric Vehicles",
+    "author": "Admin",
+    "status": "draft",
+    "date": "2024-01-20",
+    "featuredImage": "/placeholder.svg?height=300&width=500",
+    "content": "Discover why electric vehicles are perfect for urban environments..."
+  }
+]
