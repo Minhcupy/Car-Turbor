@@ -91,8 +91,10 @@ public class SecurityConfiguration {
                         // 3. ADMIN ONLY
                         // 3. ADMIN (chỉ cần login là được)
                         .requestMatchers("/api/admin/**").permitAll() //
+                        .requestMatchers(HttpMethod.PUT, "/api/cars/**").hasRole("ADMIN") //
                         .requestMatchers(HttpMethod.GET, "/api/brands/**").permitAll()
                         // Xem được không cần login
+                        .requestMatchers(HttpMethod.POST, "/api/cars/**").hasRole("ADMIN") //
                         .requestMatchers(HttpMethod.POST, "/api/brands/**").hasRole("ADMIN") //
                         .requestMatchers(HttpMethod.PUT, "/api/brands/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/brands/**").hasRole("ADMIN")
