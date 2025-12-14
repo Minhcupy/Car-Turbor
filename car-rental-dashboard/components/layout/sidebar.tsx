@@ -33,7 +33,7 @@ const sidebarItems = [
       { title: "Car List", href: "/admin/cars" },
       { title: "Brands", href: "/admin/cars/brands" },
       { title: "CarTypes", href: "/admin/cars/cartypes" },
-      { title: "Details", href: "/admin/cars/details" },
+      // { title: "Details", href: "/admin/cars/details" },
     ],
   },
   { title: "Fleet Management", href: "/admin/fleet", icon: Navigation },

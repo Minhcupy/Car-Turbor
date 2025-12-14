@@ -28,7 +28,7 @@ export default function ImageSlider({ images, alt }: ImageSliderProps) {
                 {images.map((image, index) => (
                     <div key={index} className="w-full h-64 flex-shrink-0 relative">
                         <Image
-                            src={`${API_BASE}${image}`} // gắn domain BE
+                            src={`${image}`} // gắn domain BE
                             alt={`${alt} ${index + 1}`}
                             fill
                             className="object-cover"

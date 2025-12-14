@@ -32,7 +32,7 @@ export default function Step1CarSelection({
     nextStep,
 }: Step1CarSelectionProps) {
     // Fix đường dẫn ảnh BE
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || ""
     const mainImage = selectedCar.imageUrl
         ? `${baseUrl}${selectedCar.imageUrl}`
         : "/placeholder.svg"
@@ -55,7 +55,7 @@ export default function Step1CarSelection({
                                     <div className="md:w-1/2">
                                         <Image
                                             src={mainImage}
-                                            alt={selectedCar.carName}
+                                            alt={selectedCar    .carName}
                                             width={400}
                                             height={250}
                                             className="w-full h-56 object-cover rounded-lg shadow-md"

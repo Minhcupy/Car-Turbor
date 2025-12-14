@@ -146,7 +146,7 @@ export default function Step2RentalInfo({
                         {/* Car info */}
                         <div className="bg-sky-50 p-4 rounded-lg border border-sky-200 flex items-center gap-4">
                             <Image
-                                src={`http://localhost:8080${selectedCar.imageUrl}`}
+                                src={`${selectedCar.imageUrl}`}
                                 alt={selectedCar.carName}
                                 width={120}
                                 height={80}
@@ -297,7 +297,7 @@ export default function Step2RentalInfo({
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <Image
-                            src={`http://localhost:8080${selectedCar.imageUrl}`}
+                            src={`${selectedCar.imageUrl}`}
                             alt={selectedCar.carName}
                             width={120}
                             height={80}
