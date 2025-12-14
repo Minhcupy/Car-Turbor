@@ -29,7 +29,7 @@ L.Marker.prototype.options.icon = defaultIcon
 // 🔹 Custom icon theo ảnh xe
 const carIcon = (imageUrl: string) =>
   L.icon({
-    iconUrl: `http://localhost:8080${imageUrl}`,
+    iconUrl: `${imageUrl}`,
     iconSize: [50, 50],
     iconAnchor: [25, 25],
     className: "rounded-full border-2 border-white shadow-md",
@@ -45,7 +45,7 @@ interface FleetOverview {
 interface FleetCar {
   carId: number
   carName: string
-  imageUrl: string
+  imageUrl: string | null
   location: string
   status: "AVAILABLE" | "RENTED" | "MAINTENANCE"
 }
@@ -55,7 +55,7 @@ interface CarLocation {
   status: "AVAILABLE" | "RENTED" | "MAINTENANCE"
   latitude: number | null
   longitude: number | null
-  imageUrl?: string
+  imageUrl?: string | null
 }
 
 export default function FleetPage() {
@@ -162,7 +162,7 @@ export default function FleetPage() {
                     <Card key={vehicle.carId} className="overflow-hidden hover:shadow-2xl rounded-2xl border bg-white">
                       <div className="aspect-video relative">
                         <Image
-                          src={`http://localhost:8080${vehicle.imageUrl}`}
+                          src={`${vehicle.imageUrl}`}
                           alt={vehicle.carName}
                           fill
                           className="object-cover rounded-t-2xl"
@@ -202,7 +202,7 @@ export default function FleetPage() {
                           <div className="flex items-center gap-2">
                             {car.imageUrl && (
                               <img
-                                src={`http://localhost:8080${car.imageUrl}`}
+                                src={`${car.imageUrl}`}
                                 alt={car.carName}
                                 className="w-12 h-8 object-cover rounded"
                               />

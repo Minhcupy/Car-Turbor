@@ -274,7 +274,7 @@ export default function Step4Payment({
                     <CardContent className="space-y-4 text-sm">
                         <div className="flex gap-3">
                             <Image
-                                src={`http://localhost:8080${selectedCar.imageUrl}`}
+                                src={`${selectedCar.imageUrl}`}
                                 alt={selectedCar.carName}
                                 width={100}
                                 height={70}

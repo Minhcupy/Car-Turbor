@@ -48,33 +48,33 @@ export const dashboardApi = {
         return res.data;
     },
 
-    // getRevenue: async (): Promise<RevenueChart[]> => {
-    //     const res = await api.get<RevenueChart[]>("/admin/dashboard/charts/revenue");
-    //     return res.data;
-    // },
+    getRevenue: async (): Promise<RevenueChart[]> => {
+        const res = await api.get<RevenueChart[]>("/admin/dashboard/charts/revenue");
+        return res.data;
+    },
 
-    // getDailyBookings: async (): Promise<DailyBookings[]> => {
-    //     const res = await api.get<DailyBookings[]>("/admin/dashboard/charts/daily-bookings");
-    //     return res.data;
-    // },
+    getDailyBookings: async (): Promise<DailyBookings[]> => {
+        const res = await api.get<DailyBookings[]>("/admin/dashboard/charts/daily-bookings");
+        return res.data;
+    },
 
-    // getFleetByBrand: async (): Promise<Ratio[]> => {
-    //     const res = await api.get<Ratio[]>("/admin/dashboard/charts/brands");
-    //     return res.data;
-    // },
+    getFleetByBrand: async (): Promise<Ratio[]> => {
+        const res = await api.get<Ratio[]>("/admin/dashboard/charts/brands");
+        return res.data;
+    },
 
-    // getFleetByType: async (): Promise<Ratio[]> => {
-    //     const res = await api.get<Ratio[]>("/admin/dashboard/charts/types");
-    //     return res.data;
-    // },
+    getFleetByType: async (): Promise<Ratio[]> => {
+        const res = await api.get<Ratio[]>("/admin/dashboard/charts/types");
+        return res.data;
+    },
 
-    // getRecentBookings: async (): Promise<RecentBooking[]> => {
-    //     const res = await api.get<RecentBooking[]>("/admin/dashboard/recent/bookings");
-    //     return res.data;
-    // },
+    getRecentBookings: async (): Promise<RecentBooking[]> => {
+        const res = await api.get<RecentBooking[]>("/admin/dashboard/recent/bookings");
+        return res.data;
+    },
 
-    // getRecentCustomers: async (): Promise<RecentCustomer[]> => {
-    //     const res = await api.get<RecentCustomer[]>("/admin/dashboard/recent/customers");
-    //     return res.data;
-    // },
+    getRecentCustomers: async (): Promise<RecentCustomer[]> => {
+        const res = await api.get<RecentCustomer[]>("/admin/dashboard/recent/customers");
+        return res.data;
+    },
 };

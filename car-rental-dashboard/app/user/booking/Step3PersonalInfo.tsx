@@ -230,7 +230,7 @@ export default function Step3PersonalInfo({
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <Image
-                            src={`http://localhost:8080${selectedCar.imageUrl}`}
+                            src={`${selectedCar.imageUrl}`}
                             alt={selectedCar.carName}
                             width={120}
                             height={80}

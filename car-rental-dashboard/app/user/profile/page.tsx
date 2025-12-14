@@ -1,5 +1,5 @@
 // "use client"
-
+//
 // import type React from "react"
 // import { useState } from "react"
 // import { Eye, EyeOff, Car, ArrowLeft } from "lucide-react"
@@ -9,10 +9,10 @@
 // import { Label } from "@/components/ui/label"
 // import Link from "next/link"
 // import { useRouter } from "next/navigation"
-
+//
 // // Import service
 // import { register } from "@/src/services/user/auth"
-
+//
 // export default function RegisterPage() {
 //   const [showPassword, setShowPassword] = useState(false)
 //   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -23,12 +23,12 @@
 //     confirmPassword: "",
 //     agreeTerms: false,
 //   })
-
+//
 //   const router = useRouter()
-
+//
 //   const handleSubmit = async (e: React.FormEvent) => {
 //     e.preventDefault()
-
+//
 //     if (formData.password !== formData.confirmPassword) {
 //       alert("Mật khẩu xác nhận không khớp!")
 //       return
@@ -37,21 +37,21 @@
 //       alert("Vui lòng đồng ý với điều khoản sử dụng!")
 //       return
 //     }
-
+//
 //     try {
 //       await register({
 //         userName: formData.userName,
 //         userPassword: formData.password,
 //         userEmail: formData.email,
 //       })
-
+//
 //       alert("Đăng ký thành công!")
 //       router.push("/user/login")
 //     } catch (err: any) {
 //       alert(err?.response?.data?.message || "Đăng ký thất bại")
 //     }
 //   }
-
+//
 //   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
 //     const { name, value, type, checked } = e.target
 //     setFormData({
@@ -59,7 +59,7 @@
 //       [name]: type === "checkbox" ? checked : value,
 //     })
 //   }
-
+//
 //   return (
 //     <div className="min-h-screen bg-gradient-to-br from-sky-50 to-white flex items-center justify-center p-4">
 //       <div className="w-full max-w-md">
@@ -71,7 +71,7 @@
 //           <ArrowLeft className="h-4 w-4 mr-2" />
 //           Về trang chủ
 //         </Link>
-
+//
 //         <Card className="border-sky-100 shadow-lg">
 //           <CardHeader className="text-center pb-6">
 //             <div className="flex items-center justify-center mb-4">

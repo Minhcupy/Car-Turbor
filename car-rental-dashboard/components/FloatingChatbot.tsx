@@ -138,7 +138,7 @@ export default function FloatingChatbot() {
                                                         >
                                                             {car.imageUrl && (
                                                                 <img
-                                                                    src={`http://localhost:8080${car.imageUrl}`}
+                                                                    src={`${car.imageUrl}`}
                                                                     alt={car.name}
                                                                     className="w-16 h-12 object-cover rounded-lg"
                                                                 />

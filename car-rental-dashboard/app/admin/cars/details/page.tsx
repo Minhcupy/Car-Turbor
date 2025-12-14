@@ -41,7 +41,7 @@ export default function BrandsPage() {
     //                             ))}
     //                         </SelectContent>
     //                     </Select>
-
+    //
     //                     {cars[0] && (
     //                         <div className="space-y-3">
     //                             <div className="aspect-video relative rounded-lg overflow-hidden">
@@ -87,11 +87,11 @@ export default function BrandsPage() {
     //                         </div>
     //                     )}
     //                 </div>
-
+    //
     //                 <div className="space-y-4">
     //                     <h3 className="font-semibold">Description</h3>
     //                     <p className="text-sm text-muted-foreground">{cars[0]?.description}</p>
-
+    //
     //                     <div className="space-y-2">
     //                         <h3 className="font-semibold">Pricing</h3>
     //                         <div className="grid grid-cols-2 gap-4">
@@ -105,7 +105,7 @@ export default function BrandsPage() {
     //                             </div>
     //                         </div>
     //                     </div>
-
+    //
     //                     <div className="flex space-x-2">
     //                         <Button variant="outline" className="flex-1 bg-transparent">
     //                             Change Status

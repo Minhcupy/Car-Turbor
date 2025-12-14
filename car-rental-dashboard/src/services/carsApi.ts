@@ -3,6 +3,12 @@ import axios from "axios"
 
 const API_URL = "http://localhost:8080/api/cars"
 
+function getAuthHeader() {
+    if (typeof window === "undefined") return {}
+    const token = localStorage.getItem("accessToken")   // 👈 sửa lại key nếu bạn dùng key khác
+    return token ? { Authorization: `Bearer ${token}` } : {}
+}
+
 export type Car = {
     id: number
     carName: string
@@ -33,7 +39,7 @@ export type CarPage = {
 }
 
 export const carsApi = {
-    // 🔹 Lấy danh sách phân trang + tìm kiếm
+    // 🔹 Lấy danh sách phân trang + tìm kiếm (GET đang permitAll)
     fetchPage: async (page = 1, pageSize = 10, keyword = ""): Promise<CarPage> => {
         const res = await axios.get<CarPage>(API_URL, {
             params: { page, pageSize, keyword },
@@ -41,7 +47,7 @@ export const carsApi = {
         return res.data
     },
 
-    // 🔹 Lấy tất cả (nếu BE hỗ trợ)
+    // 🔹 Lấy tất cả
     getAll: async (): Promise<Car[]> => {
         const res = await axios.get<CarPage>(API_URL, { params: { page: 1, pageSize: 1000 } })
         return res.data.content
@@ -53,21 +59,34 @@ export const carsApi = {
         return res.data
     },
 
-    // Thêm mới
+    // 🔹 Thêm mới (cần token)
     create: async (formData: FormData): Promise<Car> => {
-        const res = await axios.post<Car>(API_URL, formData) // ⚠️ không ép headers, axios tự set
+        const res = await axios.post<Car>(API_URL, formData, {
+            headers: {
+                ...getAuthHeader(),          // 👈 thêm Authorization
+                // KHÔNG cần set Content-Type, axios tự set cho FormData
+            },
+        })
         return res.data
     },
 
-    // Cập nhật
+    // 🔹 Cập nhật (cần token)
     update: async (id: number, formData: FormData): Promise<Car> => {
-        const res = await axios.put<Car>(`${API_URL}/${id}`, formData)
+        const res = await axios.put<Car>(`${API_URL}/${id}`, formData, {
+            headers: {
+                ...getAuthHeader(),
+            },
+        })
         return res.data
     },
 
-    // 🔹 Xóa
+    // 🔹 Xóa (cần token)
     delete: async (id: number): Promise<{ message: string }> => {
-        const res = await axios.delete<{ message: string }>(`${API_URL}/${id}`)
+        const res = await axios.delete<{ message: string }>(`${API_URL}/${id}`, {
+            headers: {
+                ...getAuthHeader(),
+            },
+        })
         return res.data
     },
 }
