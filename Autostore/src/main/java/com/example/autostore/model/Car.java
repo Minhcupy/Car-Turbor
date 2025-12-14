@@ -4,6 +4,7 @@ import com.example.autostore.Enum.CarStatus;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -47,15 +48,15 @@ public class Car {
 
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    private List<CarImage> carImages;
+    private List<CarImage> carImages = new ArrayList<>();
 
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    private List<Pricing> pricing;
+    private List<Pricing> pricing = new ArrayList<>();
 
     @OneToMany(mappedBy = "car", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
-    private List<Booking> bookings;
+    private List<Booking> bookings = new ArrayList<>();
 
     @ManyToOne
     @JoinColumn(name = "carTypeId", nullable = false)
@@ -158,7 +159,14 @@ public class Car {
     }
 
     public void setCarImages(List<CarImage> carImages) {
-        this.carImages = carImages;
+        if (this.carImages == null) {
+            this.carImages = new ArrayList<>();
+        } else {
+            this.carImages.clear();
+        }
+        if (carImages != null) {
+            this.carImages.addAll(carImages);
+        }
     }
 
     public List<Pricing> getPricing() {

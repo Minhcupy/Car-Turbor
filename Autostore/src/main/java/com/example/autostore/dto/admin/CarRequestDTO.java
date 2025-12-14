@@ -52,7 +52,7 @@ public class CarRequestDTO {
     private Integer carTypeId;
 
     // ===== Ảnh =====
-    @Size(min = 1, max = 5, message = "Phải tải lên từ 1 đến 5 ảnh")
+    @Size(max = 5, message = "Phải tải lên từ 1 đến 5 ảnh")
     private List<MultipartFile> images;
 
     public String getStatus() {
