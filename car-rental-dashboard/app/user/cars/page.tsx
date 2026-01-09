@@ -1,8 +1,9 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react"
+
 import { useSearchParams } from "next/navigation"
-import { Car, Search, Droplets, Zap } from "lucide-react"
+import { Car, Search, Droplets, Zap, ChevronLeft, ChevronRight } from "lucide-react"
 
 import { Input } from "@/components/ui/input"
 import {
@@ -29,13 +30,19 @@ export default function CarsPage() {
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const didAutoScrollRef = useRef(false)
 
-  // Bộ lọc UI (lọc client)
+  // ====== Filters (lọc client) ======
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [selectedPriceRange, setSelectedPriceRange] = useState("all")
   const [selectedSeats, setSelectedSeats] = useState("all")
   const [selectedFuelType, setSelectedFuelType] = useState("all")
-  const [viewMode] = useState<"grid" | "list">("grid")
+
+  // ====== Carousel: luôn 3 xe / dịch 1 xe ======
+  const visibleCount = 3
+  const [index, setIndex] = useState(0) // vị trí bắt đầu
+  const [stepPx, setStepPx] = useState(0) // width card + gap
+  const trackRef = useRef<HTMLDivElement | null>(null)
+  const firstItemRef = useRef<HTMLDivElement | null>(null)
 
   // ===== 1) Đọc query URL để search =====
   const urlSearch = useMemo(() => {
@@ -67,9 +74,9 @@ export default function CarsPage() {
 
   // ===== 2) Gọi API dựa theo query =====
   useEffect(() => {
-    async function fetchCars() {
+    const fetchCars = async () => {
       setLoading(true)
-      didAutoScrollRef.current = false // reset mỗi lần query đổi
+      didAutoScrollRef.current = false
 
       try {
         if (urlSearch.hasSearch) {
@@ -99,25 +106,21 @@ export default function CarsPage() {
     fetchCars()
   }, [urlSearch])
 
-  // ===== 2.1) Auto-scroll xuống khu vực danh sách xe khi có search query =====
+  // ===== 2.1) Auto-scroll khi có search query =====
   useEffect(() => {
     if (!urlSearch.hasSearch) return
     if (loading) return
     if (didAutoScrollRef.current) return
 
-    // đợi DOM render danh sách xong rồi cuộn
     const t = window.setTimeout(() => {
-      resultsRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      })
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
       didAutoScrollRef.current = true
     }, 200)
 
     return () => window.clearTimeout(t)
   }, [urlSearch.hasSearch, loading])
 
-  // ===== 3) Lọc client như cũ =====
+  // ===== 3) Lọc client =====
   const filteredCars = useMemo(() => {
     const term = searchTerm.trim().toLowerCase()
 
@@ -127,19 +130,14 @@ export default function CarsPage() {
       const typeName = (car.typeName || "").toLowerCase()
 
       const matchesSearch =
-          !term ||
-          carName.includes(term) ||
-          brandName.includes(term) ||
-          typeName.includes(term)
+          !term || carName.includes(term) || brandName.includes(term) || typeName.includes(term)
 
       const matchesCategory =
           selectedCategory === "all" || (car.typeName || "").includes(selectedCategory)
 
-      const matchesSeats =
-          selectedSeats === "all" || String(car.seats) === selectedSeats
+      const matchesSeats = selectedSeats === "all" || String(car.seats) === selectedSeats
 
-      const matchesFuelType =
-          selectedFuelType === "all" || car.fuelType === selectedFuelType
+      const matchesFuelType = selectedFuelType === "all" || car.fuelType === selectedFuelType
 
       let matchesPrice = true
       if (selectedPriceRange !== "all" && car.price !== null && car.price !== undefined) {
@@ -163,6 +161,55 @@ export default function CarsPage() {
 
   const gasolineCars = useMemo(() => cars.filter((c) => c.fuelType === "gasoline"), [cars])
   const electricCars = useMemo(() => cars.filter((c) => c.fuelType === "electric"), [cars])
+
+  // ===== Carousel derived =====
+  const maxIndex = useMemo(() => Math.max(0, filteredCars.length - visibleCount), [filteredCars.length])
+
+  // reset index khi filter/dữ liệu đổi
+  useEffect(() => {
+    setIndex(0)
+  }, [
+    searchTerm,
+    selectedCategory,
+    selectedPriceRange,
+    selectedSeats,
+    selectedFuelType,
+    loadMode,
+    urlSearch.hasSearch,
+    cars.length,
+  ])
+
+  // kẹp index nếu list ngắn lại
+  useEffect(() => {
+    setIndex((cur) => Math.min(cur, maxIndex))
+  }, [maxIndex])
+
+  // đo stepPx = width item + gap để dịch đúng 1 xe/lần
+  useLayoutEffect(() => {
+    if (loading) return
+    if (!firstItemRef.current || !trackRef.current) return
+
+    const measure = () => {
+      const itemW = firstItemRef.current?.getBoundingClientRect().width ?? 0
+      const gapStr = getComputedStyle(trackRef.current!).gap || "0px"
+      const gap = Number.parseFloat(gapStr) || 0
+      setStepPx(itemW + gap)
+    }
+
+    // đợi browser render layout xong rồi đo
+    const raf = requestAnimationFrame(measure)
+
+    window.addEventListener("resize", measure)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener("resize", measure)
+    }
+  }, [loading, filteredCars.length])
+
+
+  const scrollToResults = () => {
+    resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })
+  }
 
   // Fix Tailwind dynamic class
   const statStyles = {
@@ -190,11 +237,11 @@ export default function CarsPage() {
               </h1>
 
               <p className="text-xl text-gray-200 max-w-3xl mx-auto mb-6 leading-relaxed">
-                Chúng tôi mang đến bộ sưu tập xe đa dạng từ sedan sang trọng, SUV tiện nghi cho đến dòng xe điện hiện đại.
-                Tất cả đều được bảo dưỡng định kỳ, thủ tục nhanh gọn và dịch vụ tận tâm.
+                Chúng tôi mang đến bộ sưu tập xe đa dạng từ sedan sang trọng, SUV tiện nghi cho đến
+                dòng xe điện hiện đại. Tất cả đều được bảo dưỡng định kỳ, thủ tục nhanh gọn và dịch vụ
+                tận tâm.
               </p>
 
-              {/* Thông báo đang ở chế độ search theo query */}
               {loadMode === "search" && urlSearch.hasSearch && (
                   <div className="mx-auto max-w-3xl text-sm text-gray-100/90 bg-white/10 border border-white/15 rounded-xl px-4 py-3 mb-8">
                     Đang hiển thị xe theo lịch trình:
@@ -321,23 +368,88 @@ export default function CarsPage() {
             </div>
           </div>
 
-          {/* ====== Anchor để scroll tới đây ====== */}
+          {/* Anchor */}
           <div ref={resultsRef} />
 
-          {/* Car List */}
+          {/* Car List: Carousel 3 xe / dịch 1 xe */}
           {loading ? (
               <div className="text-center py-20 text-gray-500">Đang tải...</div>
           ) : filteredCars.length > 0 ? (
-              <div
-                  className={`grid gap-8 ${
-                      viewMode === "grid"
-                          ? "md:grid-cols-2 xl:grid-cols-3"
-                          : "grid-cols-1 max-w-4xl mx-auto"
-                  }`}
-              >
-                {filteredCars.map((car) => (
-                    <CarCard key={car.carId} car={car} viewMode={viewMode} />
-                ))}
+              // OUTER: không overflow-hidden để nút ra ngoài được
+              <div className="relative">
+                {/* Arrow Left (đặt ở outer) */}
+                <button
+                    type="button"
+                    onClick={() => {
+                      setIndex((i) => Math.max(0, i - 1))
+                      scrollToResults()
+                    }}
+                    disabled={index === 0}
+                    className={`absolute left-0 top-1/2 -translate-y-1/2 -translate-x-6 z-30
+        h-12 w-12 rounded-full border bg-white/90 shadow-lg backdrop-blur
+        flex items-center justify-center transition
+        ${index === 0 ? "opacity-40 cursor-not-allowed" : "hover:scale-105"}`}
+                    aria-label="Trước"
+                >
+                  <ChevronLeft className="h-6 w-6 text-gray-700" />
+                </button>
+
+                {/* Arrow Right (đặt ở outer) */}
+                <button
+                    type="button"
+                    onClick={() => {
+                      setIndex((i) => Math.min(maxIndex, i + 1))
+                      scrollToResults()
+                    }}
+                    disabled={index >= maxIndex}
+                    className={`absolute right-0 top-1/2 -translate-y-1/2 translate-x-6 z-30
+        h-12 w-12 rounded-full border bg-white/90 shadow-lg backdrop-blur
+        flex items-center justify-center transition
+        ${index >= maxIndex ? "opacity-40 cursor-not-allowed" : "hover:scale-105"}`}
+                    aria-label="Sau"
+                >
+                  <ChevronRight className="h-6 w-6 text-gray-700" />
+                </button>
+
+                {/* VIEWPORT: chỉ viewport mới overflow-hidden */}
+                <div className="overflow-hidden">
+                  {/* Track: flex 1 hàng, dịch bằng translateX */}
+                  <div
+                      ref={trackRef}
+                      className="flex gap-8 transition-transform duration-500 ease-out will-change-transform"
+                      style={{ transform: `translate3d(-${index * stepPx}px, 0, 0)` }}
+                  >
+                    {filteredCars.map((car, i) => (
+                        <div
+                            key={car.carId}
+                            ref={i === 0 ? firstItemRef : null}
+                            className="shrink-0 basis-[calc((100%-4rem)/3)]"
+                        >
+                          <CarCard car={car} viewMode={"grid"} />
+                        </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Dots theo index (tùy thích) */}
+                {maxIndex > 0 && (
+                    <div className="flex items-center justify-center gap-2 mt-8">
+                      {Array.from({ length: maxIndex + 1 }).map((_, i) => (
+                          <button
+                              key={i}
+                              type="button"
+                              onClick={() => {
+                                setIndex(i)
+                                scrollToResults()
+                              }}
+                              className={`h-2.5 w-2.5 rounded-full transition ${
+                                  i === index ? "bg-blue-600" : "bg-gray-300 hover:bg-gray-400"
+                              }`}
+                              aria-label={`Vị trí ${i + 1}`}
+                          />
+                      ))}
+                    </div>
+                )}
               </div>
           ) : (
               <div className="text-center py-20 text-gray-500">Không tìm thấy xe phù hợp</div>

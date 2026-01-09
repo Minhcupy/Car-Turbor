@@ -25,7 +25,7 @@ export default function Navbar() {
             <Link href="/user" className="flex items-center space-x-2">
               <Car className="h-8 w-8 text-sky-400" />
               <span className="text-2xl font-bold">
-              Car<span className="text-sky-400">Book</span>
+              Car<span className="text-sky-400">Turbo</span>
             </span>
             </Link>
 
