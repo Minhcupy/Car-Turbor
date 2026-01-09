@@ -217,6 +217,11 @@ export default function CarDetailPage() {
           {/* RIGHT: Related Cars */}
           <div className="space-y-4">
             <h2 className="text-xl font-semibold text-gray-800">Xe tương tự</h2>
+            {relatedCars.length === 0 ? (
+                <div className="bg-white p-6 rounded-lg shadow text-gray-500 text-sm">
+                  Hiện không có xe tương tự.
+                </div>
+            ) : (
             <div className="grid sm:grid-cols-2 gap-6">
               {relatedCars.map((car) => (
                 <Card
@@ -271,6 +276,7 @@ export default function CarDetailPage() {
                 </Card>
               ))}
             </div>
+            )}
           </div>
 
         </div>

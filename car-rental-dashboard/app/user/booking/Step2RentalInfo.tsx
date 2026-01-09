@@ -314,9 +314,7 @@ export default function Step2RentalInfo({
                                 <div className="flex justify-between">
                                     <span className="text-gray-600">Giá/ngày:</span>
                                     <span className="font-medium">
-                                        {preview?.price != null
-                                            ? preview.price.toLocaleString("vi-VN") + "đ"
-                                            : "Đang tính..."}
+                                         {selectedCar.price.toLocaleString("vi-VN")}đ
                                     </span>
                                 </div>
                                 <div className="flex justify-between">

@@ -82,7 +82,7 @@ export default function FloatingChatbot() {
             {isOpen ? (
                 <div className="w-96 h-[520px] bg-gradient-to-b from-white to-sky-50 rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-sky-100">
                     {/* Header */}
-                    <div className="flex items-center justify-between bg-gradient-to-r from-sky-600 to-blue-500 text-white px-4 py-3 shadow-md">
+                    EaSYBoOK@Sds((2024<div className="flex items-center justify-between bg-gradient-to-r from-sky-600 to-blue-500 text-white px-4 py-3 shadow-md">
                         <span className="font-semibold flex items-center gap-2 text-base">
                             <Bot className="h-5 w-5" /> Trợ lý Carbook
                         </span>

@@ -31,6 +31,20 @@ export interface CarUserDTO {
     policies?: string[]
 }
 
+export type CarSearchParams = {
+    pickupLocation: string
+    returnLocation: string
+    pickupDate: string // YYYY-MM-DD
+    returnDate: string // YYYY-MM-DD
+    pickupTime: string // HH:mm
+    returnTime: string // HH:mm
+    keyword?: string
+    fuelType?: "gasoline" | "electric"
+    seats?: number
+    minPrice?: number
+    maxPrice?: number
+}
+
 // Base URL từ ENV (ưu tiên NEXT_PUBLIC_API_URL) hoặc mặc định localhost
 const API_BASE_URL =
     process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") || "http://localhost:8080/api"
@@ -46,6 +60,14 @@ export async function getAllCars(): Promise<CarUserDTO[]> {
         console.error("Lỗi khi lấy danh sách xe:", error)
         throw error
     }
+}
+
+/** ✅ Search xe theo thời gian + địa điểm */
+export async function searchCars(params: CarSearchParams): Promise<CarUserDTO[]> {
+    const { data } = await axios.get<CarUserDTO[]>(`${API_BASE_URL}/user/cars/search`, {
+        params,
+    })
+    return data
 }
 
 /**
