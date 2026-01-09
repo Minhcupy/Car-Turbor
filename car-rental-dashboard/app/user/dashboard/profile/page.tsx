@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Sidebar } from "../Sidebar"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input"
 import {
     getCurrentProfile,
     deleteProfile,
-    updateProfile,
+    updateProfileJson,
+    updateProfileWithAvatar,
     UserProfile,
 } from "@/src/services/user/user"
 import {
@@ -23,8 +24,9 @@ export default function ProfilePage() {
     const [profile, setProfile] = useState<UserProfile | null>(null)
     const [loading, setLoading] = useState(true)
     const [open, setOpen] = useState(false)
+
     const [form, setForm] = useState<Partial<UserProfile>>({})
-    const [errors, setErrors] = useState<{ [k: string]: string }>({})
+    const [avatarFile, setAvatarFile] = useState<File | null>(null)
 
     useEffect(() => {
         async function fetchProfile() {
@@ -52,21 +54,45 @@ export default function ProfilePage() {
     }
 
     const handleEdit = () => {
-        if (profile) {
-            setForm({
-                userFullName: profile.userFullName,
-                userPhone: profile.userPhone,
-                avatarUrl: profile.avatarUrl,
-            })
-            setErrors({})
-            setOpen(true)
-        }
+        if (!profile) return
+        setForm({
+            userFullName: profile.userFullName,
+            userPhone: profile.userPhone,
+        })
+        setAvatarFile(null)
+        setOpen(true)
     }
+
+    // preview avatar trong modal
+    const avatarPreview = useMemo(() => {
+        if (avatarFile) return URL.createObjectURL(avatarFile)
+        return `${profile?.avatarUrl || "/uploads/default-avatar.png"}`
+    }, [avatarFile, profile?.avatarUrl])
+
+    useEffect(() => {
+        if (!avatarFile) return
+        const url = URL.createObjectURL(avatarFile)
+        return () => URL.revokeObjectURL(url)
+    }, [avatarFile])
 
     const handleSave = async () => {
         try {
-            await updateProfile(form)
-            setProfile({ ...profile!, ...form })
+            if (avatarFile) {
+                const fd = new FormData()
+                fd.append("userFullName", form.userFullName || "")
+                fd.append("userPhone", form.userPhone || "")
+                fd.append("avatar", avatarFile) // ✅ trùng BE @RequestPart MultipartFile avatar
+
+                await updateProfileWithAvatar(fd)
+            } else {
+                await updateProfileJson({
+                    userFullName: form.userFullName || "",
+                    userPhone: form.userPhone || "",
+                })
+            }
+
+            const fresh = await getCurrentProfile()
+            setProfile(fresh)
             setOpen(false)
             alert("Cập nhật thông tin thành công")
         } catch (err) {
@@ -96,7 +122,7 @@ export default function ProfilePage() {
                             <div className="flex items-start justify-between">
                                 <div className="flex items-center gap-4">
                                     <img
-                                        src={`http://localhost:8080${profile.avatarUrl || "/uploads/default-avatar.png"}`}
+                                        src={`${profile.avatarUrl || "/uploads/default-avatar.png"}`}
                                         alt="Avatar"
                                         className="h-24 w-24 rounded-full border-2 border-blue-500 object-cover"
                                     />
@@ -169,7 +195,7 @@ export default function ProfilePage() {
 
             {/* Modal chỉnh sửa */}
             <Dialog open={open} onOpenChange={setOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[520px]">
                     <DialogHeader>
                         <DialogTitle className="text-lg font-semibold text-slate-800">
                             Chỉnh sửa thông tin
@@ -177,6 +203,53 @@ export default function ProfilePage() {
                     </DialogHeader>
 
                     <div className="space-y-4 mt-4">
+                        {/* Avatar upload */}
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">
+                                Ảnh đại diện
+                            </label>
+
+                            <div className="flex items-center gap-4">
+                                {/* Preview */}
+                                <img
+                                    src={avatarPreview}
+                                    alt="Preview"
+                                    className="h-16 w-16 rounded-full border-2 border-blue-500 object-cover"
+                                />
+
+                                {/* Input file ẩn */}
+                                <input
+                                    id="avatar-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => setAvatarFile(e.target.files?.[0] || null)}
+                                />
+
+                                {/* Nút chọn avatar */}
+                                <label
+                                    htmlFor="avatar-upload"
+                                    className="
+        cursor-pointer
+        px-4 py-2
+        text-sm
+        font-medium
+        rounded-md
+        border border-blue-500
+        text-blue-600
+        hover:bg-blue-50
+        transition
+      "
+                                >
+                                    Chọn avatar
+                                </label>
+                            </div>
+
+                            <p className="text-xs text-slate-500 mt-2">
+                                Chọn ảnh từ máy (.jpg, .png). Kích thước &lt; 5MB
+                            </p>
+                        </div>
+
                         <div>
                             <label className="block text-sm font-semibold text-slate-700 mb-2">Họ và tên</label>
                             <Input
@@ -191,15 +264,6 @@ export default function ProfilePage() {
                             <Input
                                 value={form.userPhone || ""}
                                 onChange={(e) => setForm({ ...form, userPhone: e.target.value })}
-                                className="border-2 border-blue-500 rounded-lg px-4 py-3"
-                            />
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Avatar URL</label>
-                            <Input
-                                value={form.avatarUrl || ""}
-                                onChange={(e) => setForm({ ...form, avatarUrl: e.target.value })}
                                 className="border-2 border-blue-500 rounded-lg px-4 py-3"
                             />
                         </div>

@@ -18,13 +18,12 @@ const schema = z.object({
     quantity: z.preprocess((v) => Number(v), z.number().min(1, "Số lượng phải >= 1")),
     location: z.string().min(1, "Vị trí không được để trống"),
     engine: z.string().min(1, "Động cơ không được để trống"),
-    fuelType: z.string().min(1, "Nhiên liệu không được để trống"),
+    fuelType: z.string().min(1, "Nhiên liệu không được để trống"), // electric | gasoline
     seatCount: z.preprocess((v) => Number(v), z.number().min(1, "Số ghế phải >= 1")),
     year: z.preprocess((v) => Number(v), z.number().min(1900, "Năm sản xuất không hợp lệ")),
     color: z.string().min(1, "Màu sắc không được để trống"),
     licensePlate: z.string().min(1, "Biển số không được để trống"),
 
-    // ✅ Fix: ép kiểu và tránh NaN
     brandId: z.preprocess(
         (v) => (v === "" ? undefined : Number(v)),
         z.number({ invalid_type_error: "Phải chọn thương hiệu" }).min(1, "Phải chọn thương hiệu")
@@ -36,7 +35,6 @@ const schema = z.object({
 
     status: z.string().min(1, "Phải chọn trạng thái"),
 })
-
 
 type FormValues = z.infer<typeof schema>
 
@@ -54,6 +52,8 @@ export function ModalCarForm({ car, onClose, onSaved }: Props) {
     const {
         register,
         handleSubmit,
+        watch,
+        setValue,
         formState: { errors },
     } = useForm<FormValues>({
         resolver: zodResolver(schema),
@@ -64,7 +64,7 @@ export function ModalCarForm({ car, onClose, onSaved }: Props) {
                 quantity: car.quantity,
                 location: car.location,
                 engine: car.engine,
-                fuelType: car.fuelType,
+                fuelType: car.fuelType, // electric | gasoline
                 seatCount: car.seatCount,
                 year: car.year,
                 color: car.color,
@@ -88,6 +88,12 @@ export function ModalCarForm({ car, onClose, onSaved }: Props) {
             },
     })
 
+    // ✅ Chỉ chỉnh CSS border/bo góc cho input/select
+    const inputCls =
+        "mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+    const selectCls =
+        "mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+
     // Load brand + carType
     useEffect(() => {
         Promise.all([brandApi.getAll(), carTypeApi.getAll()])
@@ -106,7 +112,7 @@ export function ModalCarForm({ car, onClose, onSaved }: Props) {
         fd.append("quantity", String(data.quantity))
         fd.append("location", data.location)
         fd.append("engine", data.engine)
-        fd.append("fuelType", data.fuelType)
+        fd.append("fuelType", data.fuelType) // electric | gasoline
         fd.append("seatCount", String(data.seatCount))
         fd.append("year", String(data.year))
         fd.append("color", data.color)
@@ -129,6 +135,9 @@ export function ModalCarForm({ car, onClose, onSaved }: Props) {
         }
     }
 
+    const fuelTypeValue = watch("fuelType") || ""
+    const fuelSelectValue = fuelTypeValue === "electric" || fuelTypeValue === "gasoline" ? fuelTypeValue : ""
+
     return (
         <Dialog open onOpenChange={onClose}>
             <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -140,28 +149,28 @@ export function ModalCarForm({ car, onClose, onSaved }: Props) {
                     {/* Car name */}
                     <div>
                         <Label>Tên xe</Label>
-                        <Input {...register("carName")} />
+                        <Input {...register("carName")} className={inputCls} />
                         {errors.carName && <p className="text-red-500 text-sm">{errors.carName.message}</p>}
                     </div>
 
                     {/* Quantity */}
                     <div>
                         <Label>Số lượng</Label>
-                        <Input type="number" {...register("quantity")} />
+                        <Input type="number" {...register("quantity")} className={inputCls} />
                         {errors.quantity && <p className="text-red-500 text-sm">{errors.quantity.message}</p>}
                     </div>
 
                     {/* Location */}
                     <div>
                         <Label>Vị trí</Label>
-                        <Input {...register("location")} />
+                        <Input {...register("location")} className={inputCls} />
                         {errors.location && <p className="text-red-500 text-sm">{errors.location.message}</p>}
                     </div>
 
                     {/* Status */}
                     <div>
                         <Label>Trạng thái</Label>
-                        <select {...register("status")} className="border rounded w-full p-2">
+                        <select {...register("status")} className={selectCls}>
                             <option value="">-- Chọn trạng thái --</option>
                             <option value="AVAILABLE">AVAILABLE</option>
                             <option value="RENTED">RENTED</option>
@@ -170,64 +179,94 @@ export function ModalCarForm({ car, onClose, onSaved }: Props) {
                         {errors.status && <p className="text-red-500 text-sm">{errors.status.message}</p>}
                     </div>
 
-                    <select {...register("brandId")} className="border rounded w-full p-2">
-                        <option value="">-- Chọn thương hiệu --</option>
-                        {brands.map((b) => (
-                            <option key={b.brandId} value={String(b.brandId)}>
-                                {b.brandName}
-                            </option>
-                        ))}
-                    </select>
+                    {/* Brand */}
+                    <div>
+                        <Label>Thương hiệu</Label>
+                        <select {...register("brandId")} className={selectCls}>
+                            <option value="">-- Chọn thương hiệu --</option>
+                            {brands.map((b) => (
+                                <option key={b.brandId} value={String(b.brandId)}>
+                                    {b.brandName}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.brandId && <p className="text-red-500 text-sm">{errors.brandId.message}</p>}
+                    </div>
 
-                    <select {...register("carTypeId")} className="border rounded w-full p-2">
-                        <option value="">-- Chọn loại xe --</option>
-                        {carTypes.map((ct) => (
-                            <option key={ct.carTypeId} value={String(ct.carTypeId)}>
-                                {ct.typeName}
-                            </option>
-                        ))}
-                    </select>
-
+                    {/* Car type */}
+                    <div>
+                        <Label>Loại xe</Label>
+                        <select {...register("carTypeId")} className={selectCls}>
+                            <option value="">-- Chọn loại xe --</option>
+                            {carTypes.map((ct) => (
+                                <option key={ct.carTypeId} value={String(ct.carTypeId)}>
+                                    {ct.typeName}
+                                </option>
+                            ))}
+                        </select>
+                        {errors.carTypeId && <p className="text-red-500 text-sm">{errors.carTypeId.message}</p>}
+                    </div>
 
                     {/* Engine */}
                     <div>
                         <Label>Động cơ</Label>
-                        <Input {...register("engine")} />
+                        <Input {...register("engine")} className={inputCls} />
                         {errors.engine && <p className="text-red-500 text-sm">{errors.engine.message}</p>}
                     </div>
 
-                    {/* Fuel type */}
+                    {/* Fuel type: select + input */}
                     <div>
                         <Label>Nhiên liệu</Label>
-                        <Input {...register("fuelType")} />
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <select
+                                className={selectCls}
+                                value={fuelSelectValue}
+                                onChange={(e) => {
+                                    const v = e.target.value
+                                    if (v) setValue("fuelType", v, { shouldValidate: true })
+                                }}
+                            >
+                                <option value="">-- Chọn --</option>
+                                <option value="electric">⚡ Điện</option>
+                                <option value="gasoline">💧 Xăng</option>
+                            </select>
+
+                            <Input
+                                {...register("fuelType")}
+                                className={inputCls}
+                                placeholder="electric / gasoline"
+                            />
+                        </div>
+
                         {errors.fuelType && <p className="text-red-500 text-sm">{errors.fuelType.message}</p>}
                     </div>
 
                     {/* Seat count */}
                     <div>
                         <Label>Số ghế</Label>
-                        <Input type="number" {...register("seatCount")} />
+                        <Input type="number" {...register("seatCount")} className={inputCls} />
                         {errors.seatCount && <p className="text-red-500 text-sm">{errors.seatCount.message}</p>}
                     </div>
 
                     {/* Year */}
                     <div>
                         <Label>Năm sản xuất</Label>
-                        <Input type="number" {...register("year")} />
+                        <Input type="number" {...register("year")} className={inputCls} />
                         {errors.year && <p className="text-red-500 text-sm">{errors.year.message}</p>}
                     </div>
 
                     {/* Color */}
                     <div>
                         <Label>Màu sắc</Label>
-                        <Input {...register("color")} />
+                        <Input {...register("color")} className={inputCls} />
                         {errors.color && <p className="text-red-500 text-sm">{errors.color.message}</p>}
                     </div>
 
                     {/* License plate */}
                     <div>
                         <Label>Biển số</Label>
-                        <Input {...register("licensePlate")} />
+                        <Input {...register("licensePlate")} className={inputCls} />
                         {errors.licensePlate && <p className="text-red-500 text-sm">{errors.licensePlate.message}</p>}
                     </div>
 
@@ -238,6 +277,7 @@ export function ModalCarForm({ car, onClose, onSaved }: Props) {
                             type="file"
                             multiple
                             accept="image/*"
+                            className={inputCls}
                             onChange={(e) => setFiles(Array.from(e.target.files || []))}
                         />
                     </div>

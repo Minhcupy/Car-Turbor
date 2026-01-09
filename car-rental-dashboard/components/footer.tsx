@@ -112,15 +112,15 @@ export default function Footer() {
             <div className="space-y-4 text-sm">
               <div className="flex items-start space-x-3">
                 <MapPin className="h-5 w-5 text-sky-400 mt-1" />
-                <span>Ngõ 94, Hồ Tùng Mậu,Phú Diễn ,Hà Nội</span>
+                <span>Số 12, ngõ 193/64/35, Phú Diễn ,Hà Nội</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-5 w-5 text-sky-400" />
-                <span>0379389761</span>
+                <span>0354883247</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-sky-400" />
-                <span>Baotuan2k4bt@gmail.com</span>
+                <span>tqmminh2004tqm@gmail.com</span>
               </div>
             </div>
           </div>
@@ -129,7 +129,7 @@ export default function Footer() {
         {/* Newsletter */}
         <div className="mt-12 border-t border-gray-700 pt-8 flex flex-col md:flex-row items-center justify-between">
           <p className="text-sm text-gray-400">
-            © 2025 Carbook. All rights reserved. | Made with ❤️ by Colorlib
+            © 2025 Carbook. All rights reserved. | Made with MinhCupy
           </p>
           <form className="mt-4 md:mt-0 flex">
             <input
