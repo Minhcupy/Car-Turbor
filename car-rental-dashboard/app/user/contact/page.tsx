@@ -79,7 +79,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h3 className="font-semibold text-gray-800 mb-1">Địa chỉ</h3>
-                    <p className="text-gray-600">123 Đường Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh</p>
+                    <p className="text-gray-600">Trường Đại học Tài nguyên và Môi trường Hà Nội</p>
                   </div>
                 </div>
                 <div className="flex items-start space-x-4">
@@ -235,16 +235,14 @@ export default function ContactPage() {
               <CardTitle className="text-gray-800">Vị Trí Của Chúng Tôi</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <div
-                className="w-full h-96 bg-cover bg-center rounded-b-lg flex items-center justify-center relative"
-                style={{ backgroundImage: "url('/office-location-map-placeholder.jpg')" }}
-              >
-                <div className="absolute inset-0 bg-gray-900/50 rounded-b-lg"></div>
-                <div className="relative z-10 text-center text-white">
-                  <MapPin className="h-12 w-12 mx-auto mb-2" />
-                  <p className="text-lg font-semibold">Văn phòng chính</p>
-                  <p className="text-sm">123 Đường Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh</p>
-                </div>
+              <div className="w-full h-96 rounded-b-lg overflow-hidden">
+                <iframe
+                    title="Bản đồ Trường Đại học Tài nguyên và Môi trường Hà Nội"
+                    className="w-full h-full"
+                    loading="lazy"
+                    referrerPolicy="no-referrer-when-downgrade"
+                    src="https://www.google.com/maps?q=Tr%C6%B0%E1%BB%9Dng%20%C4%90%E1%BA%A1i%20h%E1%BB%8Dc%20T%C3%A0i%20nguy%C3%AAn%20v%C3%A0%20M%C3%B4i%20tr%C6%B0%E1%BB%9Dng%20H%C3%A0%20N%E1%BB%99i&output=embed"
+                />
               </div>
             </CardContent>
           </Card>
@@ -274,7 +272,7 @@ export default function ContactPage() {
               <div>
                 <h3 className="font-semibold text-gray-800 mb-2">Có hỗ trợ giao xe tận nơi không?</h3>
                 <p className="text-gray-600">
-                  Có, chúng tôi hỗ trợ giao xe tận nơi trong nội thành TP.HCM. Phí giao xe sẽ được tính theo khoảng cách
+                  Có, chúng tôi hỗ trợ giao xe tận nơi trong nội thành thành phố Hà Nội. Phí giao xe sẽ được tính theo khoảng cách
                   và thời gian.
                 </p>
               </div>
