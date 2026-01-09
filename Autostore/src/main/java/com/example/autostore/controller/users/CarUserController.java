@@ -1,5 +1,6 @@
 package com.example.autostore.controller.users;
 
+import com.example.autostore.dto.CarSearchRequest;
 import com.example.autostore.dto.user.CarUserDTO;
 import com.example.autostore.service.user.implement.CarUserService;
 import org.springframework.http.ResponseEntity;
@@ -24,8 +25,15 @@ public class CarUserController {
     public ResponseEntity<List<CarUserDTO>> getAllCars() {
         return ResponseEntity.ok(carUserService.getAllCars());
     }
+
     @GetMapping("/{id}")
     public CarUserDTO getCarById(@PathVariable Integer id) {
         return carUserService.getCarById(id);
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<CarUserDTO>> search(CarSearchRequest req) {
+        return ResponseEntity.ok(carUserService.searchCars(req));
+    }
+
 }

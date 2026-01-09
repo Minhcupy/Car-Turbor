@@ -18,6 +18,18 @@ public interface IBookingRepository extends JpaRepository<Booking, Integer> {
     // Lọc theo trạng thái (PENDING, CONFIRMED, ...)
     List<Booking> findByStatus(BookingStatus status);
 
+    @Query("""
+        SELECT DISTINCT b.car.carId
+        FROM Booking b
+        WHERE b.status IN :activeStatuses
+          AND FUNCTION('timestamp', b.pickupDate, b.pickupTime) < :endDT
+          AND FUNCTION('timestamp', b.returnDate, b.returnTime) > :startDT
+    """)
+    List<Integer> findBusyCarIds(
+            @Param("startDT") LocalDateTime startDT,
+            @Param("endDT") LocalDateTime endDT,
+            @Param("activeStatuses") List<BookingStatus> activeStatuses
+    );
 
     // Lọc theo ID xe
     List<Booking> findByCar_CarId(Integer carId);

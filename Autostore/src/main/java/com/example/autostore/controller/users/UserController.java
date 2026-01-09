@@ -8,9 +8,11 @@ import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/users")
@@ -45,6 +47,26 @@ public class UserController {
 
         String userName = authentication.getName();
         UserResponseDTO updated = userService.updateUser(userName, dto);
+
+        if (updated == null) {
+            return ResponseEntity.status(404).body("User not found");
+        }
+        return ResponseEntity.ok(updated);
+    }
+
+    @PutMapping(value = "/me/avatar", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> updateCurrentUserWithAvatar(
+            Authentication authentication,
+            @RequestParam(required = false) String userFullName,
+            @RequestParam(required = false) String userPhone,
+            @RequestPart(required = false) MultipartFile avatar
+    ) {
+        if (authentication == null) {
+            return ResponseEntity.status(401).body("Unauthorized");
+        }
+
+        String userName = authentication.getName();
+        UserResponseDTO updated = userService.updateUserWithFile(userName, userFullName, userPhone, avatar);
 
         if (updated == null) {
             return ResponseEntity.status(404).body("User not found");
