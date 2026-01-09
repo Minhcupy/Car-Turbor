@@ -40,4 +40,31 @@ public interface ICarRepository extends JpaRepository<Car, Integer> {
 
     @Query("SELECT c FROM Car c WHERE c.isFeatured = true AND c.status = 'AVAILABLE'")
     List<Car> findFeaturedCars();
+
+    @Query("""
+        SELECT DISTINCT c
+        FROM Car c
+        LEFT JOIN c.brand br
+        LEFT JOIN c.carType ct
+        LEFT JOIN c.carDetail cd
+        WHERE c.status = com.example.autostore.Enum.CarStatus.AVAILABLE
+          AND (:pickupLocation IS NULL OR LOWER(c.location) LIKE LOWER(CONCAT('%', :pickupLocation, '%')))
+          AND (
+               :keyword IS NULL OR
+               LOWER(c.carName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+               LOWER(br.brandName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR
+               LOWER(ct.typeName) LIKE LOWER(CONCAT('%', :keyword, '%'))
+          )
+          AND (:fuelType IS NULL OR LOWER(cd.fuelType) = LOWER(:fuelType))
+          AND (:seats IS NULL OR cd.seatCount = :seats)
+          AND (:busyIdsEmpty = true OR c.carId NOT IN :busyCarIds)
+    """)
+    List<Car> searchAvailableCars(
+            @Param("pickupLocation") String pickupLocation,
+            @Param("keyword") String keyword,
+            @Param("fuelType") String fuelType,
+            @Param("seats") Integer seats,
+            @Param("busyCarIds") List<Integer> busyCarIds,
+            @Param("busyIdsEmpty") boolean busyIdsEmpty
+    );
 }

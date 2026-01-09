@@ -1,5 +1,6 @@
 package com.example.autostore.service.user.interfaces;
 
+import com.example.autostore.dto.CarSearchRequest;
 import com.example.autostore.dto.user.CarUserDTO;
 
 import java.util.List;
@@ -7,4 +8,5 @@ import java.util.List;
 public interface ICarUserService {
     List<CarUserDTO> getAllCars();
     CarUserDTO getCarById(Integer id);
+    List<CarUserDTO> searchCars(CarSearchRequest req);
 }

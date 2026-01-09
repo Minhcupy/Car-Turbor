@@ -5,6 +5,7 @@ import com.example.autostore.dto.user.UpdateUserDTO;
 import com.example.autostore.dto.user.UserProfileDTO;
 import com.example.autostore.model.AppUser;
 import com.example.autostore.repository.UserRepository;
+import com.example.autostore.service.FileUploadService;
 import com.example.autostore.service.user.interfaces.IUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class UserService implements IUserService {
 
     private final UserRepository userRepository;
+    private final FileUploadService fileUploadService;
 
     public boolean checkEmailExists(String email) {
         return userRepository.existsByuserEmail(email);
@@ -51,34 +53,23 @@ public class UserService implements IUserService {
                 .orElse(null);
     }
 
+    @Override
     public UserResponseDTO updateUserWithFile(String userName, String fullName, String phone, MultipartFile avatarFile) {
         return userRepository.findByUserName(userName)
                 .map(user -> {
                     if (fullName != null) user.setUserFullName(fullName);
                     if (phone != null) user.setUserPhone(phone);
 
-                    // Nếu có upload file ảnh
                     if (avatarFile != null && !avatarFile.isEmpty()) {
                         try {
-                            // Tạo thư mục uploads nếu chưa có
-                            String uploadDir = "uploads/";
-                            File dir = new File(uploadDir);
-                            if (!dir.exists()) {
-                                dir.mkdirs();
-                            }
+                            // ✅ Upload qua FileUploadService (trả về full URL)
+                            String avatarUrl = fileUploadService.uploadFile(avatarFile);
 
-                            // Tạo tên file random để tránh trùng
-                            String fileName = UUID.randomUUID() + "_" + avatarFile.getOriginalFilename();
-                            File dest = new File(uploadDir + fileName);
-
-                            // Lưu file vào thư mục uploads
-                            avatarFile.transferTo(dest);
-
-                            // Lưu đường dẫn URL để FE load (Spring phải config static resource cho /uploads/**)
-                            user.setAvatarUrl("/uploads/" + fileName);
+                            // ✅ Lưu URL xuống DB
+                            user.setAvatarUrl(avatarUrl);
 
                         } catch (IOException e) {
-                            throw new RuntimeException("Lỗi khi lưu avatar: " + e.getMessage());
+                            throw new RuntimeException("Lỗi khi lưu avatar: " + e.getMessage(), e);
                         }
                     }
 

@@ -80,6 +80,7 @@ public class SecurityConfiguration {
                                 "/api/user/cars/featured"
                         ).permitAll()
                         .requestMatchers("/api/chatbot").permitAll()
+                        .requestMatchers(HttpMethod.PUT, "/api/user/me/avatar").authenticated()
 
                         // 2. USER + ADMIN (phải login mới được gọi)
                         .requestMatchers("/api/messages/**").authenticated()
