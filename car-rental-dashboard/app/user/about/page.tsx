@@ -37,40 +37,40 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-sky-100">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2">
-              <Car className="h-8 w-8 text-sky-500" />
-              <span className="text-2xl font-bold text-gray-800">CarRental</span>
-            </Link>
-            <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/" className="text-gray-700 hover:text-sky-500 transition-colors">
-                Trang Chủ
-              </Link>
-              <Link href="/about" className="text-sky-500 font-medium">
-                Giới Thiệu
-              </Link>
-              <Link href="/cars" className="text-gray-700 hover:text-sky-500 transition-colors">
-                Xe Cho Thuê
-              </Link>
-              <Link href="/contact" className="text-gray-700 hover:text-sky-500 transition-colors">
-                Liên Hệ
-              </Link>
-            </nav>
-            <div className="flex items-center space-x-4">
-              <Link href="/login">
-                <Button variant="outline" className="border-sky-200 text-sky-600 hover:bg-sky-50 bg-transparent">
-                  Đăng Nhập
-                </Button>
-              </Link>
-              <Link href="/register">
-                <Button className="bg-sky-500 hover:bg-sky-600 text-white">Đăng Ký</Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </header>
+      {/*<header className="bg-white shadow-sm border-b border-sky-100">*/}
+      {/*  <div className="container mx-auto px-4 py-4">*/}
+      {/*    <div className="flex items-center justify-between">*/}
+      {/*      <Link href="/" className="flex items-center space-x-2">*/}
+      {/*        <Car className="h-8 w-8 text-sky-500" />*/}
+      {/*        <span className="text-2xl font-bold text-gray-800">CarRental</span>*/}
+      {/*      </Link>*/}
+      {/*      <nav className="hidden md:flex items-center space-x-8">*/}
+      {/*        <Link href="/" className="text-gray-700 hover:text-sky-500 transition-colors">*/}
+      {/*          Trang Chủ*/}
+      {/*        </Link>*/}
+      {/*        <Link href="/about" className="text-sky-500 font-medium">*/}
+      {/*          Giới Thiệu*/}
+      {/*        </Link>*/}
+      {/*        <Link href="/cars" className="text-gray-700 hover:text-sky-500 transition-colors">*/}
+      {/*          Xe Cho Thuê*/}
+      {/*        </Link>*/}
+      {/*        <Link href="/contact" className="text-gray-700 hover:text-sky-500 transition-colors">*/}
+      {/*          Liên Hệ*/}
+      {/*        </Link>*/}
+      {/*      </nav>*/}
+      {/*      <div className="flex items-center space-x-4">*/}
+      {/*        <Link href="/login">*/}
+      {/*          <Button variant="outline" className="border-sky-200 text-sky-600 hover:bg-sky-50 bg-transparent">*/}
+      {/*            Đăng Nhập*/}
+      {/*          </Button>*/}
+      {/*        </Link>*/}
+      {/*        <Link href="/register">*/}
+      {/*          <Button className="bg-sky-500 hover:bg-sky-600 text-white">Đăng Ký</Button>*/}
+      {/*        </Link>*/}
+      {/*      </div>*/}
+      {/*    </div>*/}
+      {/*  </div>*/}
+      {/*</header>*/}
 
       {/* Hero Section */}
       <section className="py-20 bg-gradient-to-r from-sky-50 to-white">
@@ -238,90 +238,90 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
-            <div>
-              <div className="flex items-center space-x-2 mb-4">
-                <Car className="h-8 w-8 text-sky-400" />
-                <span className="text-2xl font-bold">CarRental</span>
-              </div>
-              <p className="text-gray-400 mb-4">Dịch vụ cho thuê xe hàng đầu Việt Nam với hơn 10 năm kinh nghiệm</p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Dịch Vụ</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li>
-                  <a href="#" className="hover:text-sky-400 transition-colors">
-                    Thuê xe tự lái
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-sky-400 transition-colors">
-                    Thuê xe có tài xế
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-sky-400 transition-colors">
-                    Xe cưới
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-sky-400 transition-colors">
-                    Xe du lịch
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Hỗ Trợ</h3>
-              <ul className="space-y-2 text-gray-400">
-                <li>
-                  <a href="#" className="hover:text-sky-400 transition-colors">
-                    Câu hỏi thường gặp
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-sky-400 transition-colors">
-                    Chính sách
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-sky-400 transition-colors">
-                    Điều khoản
-                  </a>
-                </li>
-                <li>
-                  <Link href="/contact" className="hover:text-sky-400 transition-colors">
-                    Liên hệ
-                  </Link>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Liên Hệ</h3>
-              <div className="space-y-2 text-gray-400">
-                <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4" />
-                  <span>123 Đường ABC, Quận Bắc Từ Liêm, Hà Nội</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4" />
-                  <span>0123 456 789</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4" />
-                  <span>info@carrental.vn</span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 CarRental. Tất cả quyền được bảo lưu.</p>
-          </div>
-        </div>
-      </footer>
+      {/*/!* Footer *!/*/}
+      {/*<footer className="bg-gray-800 text-white py-12">*/}
+      {/*  <div className="container mx-auto px-4">*/}
+      {/*    <div className="grid md:grid-cols-4 gap-8">*/}
+      {/*      <div>*/}
+      {/*        <div className="flex items-center space-x-2 mb-4">*/}
+      {/*          <Car className="h-8 w-8 text-sky-400" />*/}
+      {/*          <span className="text-2xl font-bold">CarRental</span>*/}
+      {/*        </div>*/}
+      {/*        <p className="text-gray-400 mb-4">Dịch vụ cho thuê xe hàng đầu Việt Nam với hơn 10 năm kinh nghiệm</p>*/}
+      {/*      </div>*/}
+      {/*      <div>*/}
+      {/*        <h3 className="text-lg font-semibold mb-4">Dịch Vụ</h3>*/}
+      {/*        <ul className="space-y-2 text-gray-400">*/}
+      {/*          <li>*/}
+      {/*            <a href="#" className="hover:text-sky-400 transition-colors">*/}
+      {/*              Thuê xe tự lái*/}
+      {/*            </a>*/}
+      {/*          </li>*/}
+      {/*          <li>*/}
+      {/*            <a href="#" className="hover:text-sky-400 transition-colors">*/}
+      {/*              Thuê xe có tài xế*/}
+      {/*            </a>*/}
+      {/*          </li>*/}
+      {/*          <li>*/}
+      {/*            <a href="#" className="hover:text-sky-400 transition-colors">*/}
+      {/*              Xe cưới*/}
+      {/*            </a>*/}
+      {/*          </li>*/}
+      {/*          <li>*/}
+      {/*            <a href="#" className="hover:text-sky-400 transition-colors">*/}
+      {/*              Xe du lịch*/}
+      {/*            </a>*/}
+      {/*          </li>*/}
+      {/*        </ul>*/}
+      {/*      </div>*/}
+      {/*      <div>*/}
+      {/*        <h3 className="text-lg font-semibold mb-4">Hỗ Trợ</h3>*/}
+      {/*        <ul className="space-y-2 text-gray-400">*/}
+      {/*          <li>*/}
+      {/*            <a href="#" className="hover:text-sky-400 transition-colors">*/}
+      {/*              Câu hỏi thường gặp*/}
+      {/*            </a>*/}
+      {/*          </li>*/}
+      {/*          <li>*/}
+      {/*            <a href="#" className="hover:text-sky-400 transition-colors">*/}
+      {/*              Chính sách*/}
+      {/*            </a>*/}
+      {/*          </li>*/}
+      {/*          <li>*/}
+      {/*            <a href="#" className="hover:text-sky-400 transition-colors">*/}
+      {/*              Điều khoản*/}
+      {/*            </a>*/}
+      {/*          </li>*/}
+      {/*          <li>*/}
+      {/*            <Link href="/contact" className="hover:text-sky-400 transition-colors">*/}
+      {/*              Liên hệ*/}
+      {/*            </Link>*/}
+      {/*          </li>*/}
+      {/*        </ul>*/}
+      {/*      </div>*/}
+      {/*      <div>*/}
+      {/*        <h3 className="text-lg font-semibold mb-4">Liên Hệ</h3>*/}
+      {/*        <div className="space-y-2 text-gray-400">*/}
+      {/*          <div className="flex items-center space-x-2">*/}
+      {/*            <MapPin className="h-4 w-4" />*/}
+      {/*            <span>123 Đường ABC, Quận Bắc Từ Liêm, Hà Nội</span>*/}
+      {/*          </div>*/}
+      {/*          <div className="flex items-center space-x-2">*/}
+      {/*            <Phone className="h-4 w-4" />*/}
+      {/*            <span>0123 456 789</span>*/}
+      {/*          </div>*/}
+      {/*          <div className="flex items-center space-x-2">*/}
+      {/*            <Mail className="h-4 w-4" />*/}
+      {/*            <span>info@carrental.vn</span>*/}
+      {/*          </div>*/}
+      {/*        </div>*/}
+      {/*      </div>*/}
+      {/*    </div>*/}
+      {/*    <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">*/}
+      {/*      <p>&copy; 2024 CarRental. Tất cả quyền được bảo lưu.</p>*/}
+      {/*    </div>*/}
+      {/*  </div>*/}
+      {/*</footer>*/}
     </div>
   )
 }

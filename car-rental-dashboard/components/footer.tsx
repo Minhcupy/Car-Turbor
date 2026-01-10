@@ -47,7 +47,7 @@ export default function Footer() {
             <h3 className="text-lg font-semibold mb-4 text-white">Thông Tin</h3>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/about" className="hover:text-sky-400 transition-colors">
+                <Link href="/user/about" className="hover:text-sky-400 transition-colors">
                   Giới Thiệu
                 </Link>
               </li>
