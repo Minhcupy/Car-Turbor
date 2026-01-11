@@ -26,6 +26,17 @@ export async function getCurrentProfile(): Promise<UserProfile> {
     return res.data
 }
 
+export interface UserBrief {
+    id: number
+    userName: string
+    avatarUrl?: string | null
+}
+
+export type UserAvatar = {
+    id?: number
+    avatarUrl?: string | null
+}
+
 /**
  * Update profile dạng JSON (không file) -> khớp controller hiện tại @RequestBody UpdateUserDTO
  */
@@ -55,4 +66,24 @@ export async function updateProfileWithAvatar(formData: FormData): Promise<UserI
 export async function deleteProfile(): Promise<string> {
     const res = await api.delete<string>("/users/me")
     return res.data
+}
+
+export async function getUserById(id: number): Promise<UserBrief> {
+    // Backend: GET /api/users/{id}
+    // FE: baseURL đã /api => gọi /users/{id}
+    const res = await api.get<UserBrief>(`/users/${id}`)
+    return res.data
+}
+
+
+// avatar của chính mình (user đang đăng nhập)
+export async function getMyAvatar(): Promise<UserAvatar> {
+    const res = await api.get<{ avatarUrl?: string | null }>("/users/me")
+    return { avatarUrl: res.data.avatarUrl ?? null }
+}
+
+// avatar theo id (admin/shop)
+export async function getAvatarById(id: number): Promise<UserAvatar> {
+    const res = await api.get<{ id?: number; avatarUrl?: string | null }>(`/users/${id}`)
+    return { id: res.data.id, avatarUrl: res.data.avatarUrl ?? null }
 }

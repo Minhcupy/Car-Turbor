@@ -62,9 +62,9 @@ export default function LoginPage() {
       console.log("Login response:", res)
 
       // BE trả về accessToken + refreshToken + roles + userName
-      const { accessToken, refreshToken, roles, userName } = res
+      const { accessToken, refreshToken, roles, userName, id } = res
       setTokens(accessToken, refreshToken)
-
+      localStorage.setItem("userId", String(id))
       // Chuẩn hoá role (ROLE_ADMIN → ADMIN, ROLE_USER → USER)
       const role = roles && roles.length > 0 ? roles[0].replace("ROLE_", "") : null
       localStorage.setItem("userRole", role || "")

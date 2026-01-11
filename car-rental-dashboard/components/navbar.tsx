@@ -16,6 +16,7 @@ import {
 
 export default function Navbar() {
   const { auth, logout, loading } = useAuth()
+  const isAuthed = !!auth?.accessToken || !!auth?.userName || auth?.isLoggedIn
 
   return (
       <nav className="bg-gray-900 text-white shadow-lg sticky top-0 z-50">
@@ -48,7 +49,7 @@ export default function Navbar() {
               <div className="flex items-center">
                 {loading ? (
                     <span className="text-gray-400">Đang tải...</span>
-                ) : auth.isLoggedIn ? (
+                ) : isAuthed  ? (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <button className="flex items-center gap-2 rounded-full px-2 py-1 hover:bg-white/10 transition">

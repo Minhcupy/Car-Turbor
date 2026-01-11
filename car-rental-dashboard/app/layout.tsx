@@ -7,7 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata: Metadata = {
-  title: "CarRental",
+  title: "CarTurbo",
   description: "Thuê xe ô tô chất lượng cao, giá hợp lý.",
 }
 

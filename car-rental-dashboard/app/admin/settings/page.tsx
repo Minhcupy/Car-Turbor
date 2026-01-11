@@ -19,7 +19,7 @@ const mockStaff = [
   {
     id: 1,
     name: "John Admin",
-    email: "john@carrental.com",
+    email: "john@CarTurbo.com",
     role: "Admin",
     status: "active",
     lastLogin: "2024-01-20",
@@ -27,7 +27,7 @@ const mockStaff = [
   {
     id: 2,
     name: "Sarah Staff",
-    email: "sarah@carrental.com",
+    email: "sarah@CarTurbo.com",
     role: "Staff",
     status: "active",
     lastLogin: "2024-01-19",
@@ -93,11 +93,11 @@ export default function SettingsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="siteName">Site Name</Label>
-                  <Input id="siteName" defaultValue="CarRental Pro" />
+                  <Input id="siteName" defaultValue="CarTurbo Pro" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contactEmail">Contact Email</Label>
-                  <Input id="contactEmail" type="email" defaultValue="admin@carrental.com" />
+                  <Input id="contactEmail" type="email" defaultValue="admin@CarTurbo.com" />
                 </div>
               </div>
 
@@ -183,7 +183,7 @@ export default function SettingsPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="staffEmail">Email</Label>
-              <Input id="staffEmail" type="email" placeholder="john@carrental.com" />
+              <Input id="staffEmail" type="email" placeholder="john@CarTurbo.com" />
             </div>
           </div>
 

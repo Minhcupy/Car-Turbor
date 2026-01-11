@@ -175,7 +175,7 @@ export default function BookingsPage() {
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-2">
               <Car className="h-8 w-8 text-sky-500" />
-              <span className="text-2xl font-bold text-gray-800">CarRental</span>
+              <span className="text-2xl font-bold text-gray-800">CarTubor</span>
             </Link>
             <nav className="hidden md:flex items-center space-x-8">
               <Link href="/" className="text-gray-700 hover:text-sky-500 transition-colors">

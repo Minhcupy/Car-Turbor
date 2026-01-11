@@ -1,285 +1,456 @@
 "use client"
 
-import type React from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
+import { Client } from "@stomp/stompjs"
+import { MessageCircle, Send, Wifi, WifiOff, MapPin, Phone, Clock, ShieldCheck } from "lucide-react"
+import SockJS from "sockjs-client"
 
-import { useState } from "react"
-import { MapPin, Phone, Mail, Clock, Send, MessageCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+
+import { getConversation, sendMessageRest, type ChatMessage } from "@/src/services/user/chatApi"
+import { getAccessToken } from "@/src/services/user/token"
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getMyAvatar, getAvatarById } from "@/src/services/user/user"
+
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || "http://localhost:8080/ws-chat"
+const SHOP_ID = Number(process.env.NEXT_PUBLIC_SHOP_ID || 1)
+
+function fmtTime(iso?: string) {
+  if (!iso) return ""
+  try {
+    const d = new Date(iso)
+    return d.toLocaleString("vi-VN", { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })
+  } catch {
+    return ""
+  }
+}
+
+function buildConversationId(a: number, b: number) {
+  const min = Math.min(a, b)
+  const max = Math.max(a, b)
+  return `${min}-${max}`
+}
 
 export default function ContactPage() {
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    subject: "",
-    message: "",
-  })
+  const [userId, setUserId] = useState<number | null>(null)
+  const [connected, setConnected] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [err, setErr] = useState("")
+  const [messages, setMessages] = useState<ChatMessage[]>([])
+  const [text, setText] = useState("")
 
-  const handleInputChange = (field: string, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
+  const clientRef = useRef<Client | null>(null)
+  const listRef = useRef<HTMLDivElement | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    console.log("Contact form submitted:", formData)
-    alert("Cảm ơn bạn đã liên hệ! Chúng tôi sẽ phản hồi trong thời gian sớm nhất.")
-    setFormData({
-      name: "",
-      email: "",
-      phone: "",
-      subject: "",
-      message: "",
+  const [myAvatar, setMyAvatar] = useState<string | null>(null)
+  const [adminAvatar, setAdminAvatar] = useState<string | null>(null)
+
+  const adminId = SHOP_ID
+
+  const conversationId = useMemo(() => {
+    if (!userId) return null
+    return buildConversationId(userId, adminId)
+  }, [userId, adminId])
+
+  const topic = useMemo(() => {
+    if (!conversationId) return null
+    return `/topic/conversations/${conversationId}`
+  }, [conversationId])
+
+  const scrollToBottom = () => {
+    requestAnimationFrame(() => {
+      listRef.current?.scrollTo({ top: listRef.current.scrollHeight, behavior: "smooth" })
     })
   }
 
+  // lấy userId từ localStorage
+  useEffect(() => {
+    const idStr = localStorage.getItem("userId")
+    setUserId(idStr ? Number(idStr) : null)
+  }, [])
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        // user avatar (chính mình)
+        const me = await getMyAvatar()
+        setMyAvatar(me.avatarUrl ?? null)
+      } catch {}
+
+      try {
+        // admin avatar
+        const ad = await getAvatarById(adminId)
+        setAdminAvatar(ad.avatarUrl ?? null)
+      } catch (e) {
+        // nếu bị 403 => backend chưa cho user đọc /users/{id}
+        console.warn("Không lấy được avatar admin:", e)
+      }
+    })()
+  }, [adminId])
+
+  // load history
+  useEffect(() => {
+    if (!userId) {
+      setLoading(false)
+      setMessages([])
+      return
+    }
+    ;(async () => {
+      try {
+        setLoading(true)
+        setErr("")
+        const data = await getConversation()
+        setMessages(data || [])
+        scrollToBottom()
+      } catch (e: any) {
+        setErr(e?.message || "Không tải được lịch sử chat")
+      } finally {
+        setLoading(false)
+      }
+    })()
+  }, [userId, adminId])
+
+  // connect STOMP (subscribe only)
+  useEffect(() => {
+    if (!topic || !conversationId || !userId) return
+
+    const accessToken = getAccessToken()
+
+    const client = new Client({
+      webSocketFactory: () => new SockJS(WS_URL),
+      connectHeaders: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
+      reconnectDelay: 3000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      debug: () => {},
+    })
+
+    client.onConnect = () => {
+      setConnected(true)
+
+      client.subscribe(topic, (frame) => {
+        try {
+          const msg: ChatMessage = JSON.parse(frame.body)
+
+          // tránh double khi reconnect: nếu BE gửi lại hoặc FE append REST
+          setMessages((prev) => {
+            const last = prev[prev.length - 1]
+            if (
+                last &&
+                last.timestamp === msg.timestamp &&
+                last.senderId === msg.senderId &&
+                last.receiverId === msg.receiverId &&
+                last.content === msg.content
+            ) {
+              return prev
+            }
+            return [...prev, msg]
+          })
+
+          scrollToBottom()
+        } catch {}
+      })
+    }
+
+    client.onWebSocketClose = () => setConnected(false)
+    client.onStompError = () => setConnected(false)
+
+    client.activate()
+    clientRef.current = client
+
+    return () => {
+      client.deactivate()
+      clientRef.current = null
+    }
+  }, [topic, conversationId, userId])
+
+  const onSend = async () => {
+    const value = text.trim()
+    if (!value || !userId) return
+
+    setErr("")
+    setText("")
+
+    try {
+      // ✅ gửi REST để BE lưu Mongo + broadcast WS
+      const saved = await sendMessageRest({ content: value })
+
+      // Nếu WS đang mất kết nối => không nhận được broadcast => tự append
+      if (!connected) {
+        setMessages((prev) => [...prev, saved])
+        scrollToBottom()
+      }
+    } catch (e: any) {
+      setErr(e?.message || "Gửi tin nhắn thất bại")
+    }
+  }
+
+  // JSX của bạn giữ nguyên, chỉ đổi logic bên trên
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section với ảnh nền */}
-      <section
-        className="py-16 bg-cover bg-center bg-no-repeat relative"
-        style={{
-          backgroundImage: "url('/contact-us-hero-background.jpg')",
-          backgroundColor: "#f0f9ff", // fallback color
-        }}
-      >
-        <div className="absolute inset-0 bg-gradient-to-r from-sky-50/90 to-white/90"></div>
-        <div className="relative z-10 container mx-auto px-4">
-          <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-4xl font-bold text-gray-800 mb-6 text-balance drop-shadow-sm">Liên Hệ Với Chúng Tôi</h1>
-            <p className="text-xl text-gray-600 leading-relaxed drop-shadow-sm">
-              Chúng tôi luôn sẵn sàng hỗ trợ bạn 24/7. Hãy liên hệ để được tư vấn và đặt xe nhanh chóng!
-            </p>
-          </div>
-        </div>
-      </section>
+      <div className="min-h-screen bg-gradient-to-b from-sky-50 via-white to-white">
+        {/* Top bar */}
+        <header className="sticky top-0 z-20 border-b bg-white/80 backdrop-blur">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-900">Hỗ trợ trực tuyến</h1>
+                <p className="text-sm text-gray-600">
+                  Chat realtime với quản trị viên để được giúp đỡ nhanh chóng
+                </p>
+              </div>
 
-      <div className="container mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-3 gap-12">
-          {/* Contact Information */}
-          <div className="space-y-8">
-            <Card className="border-sky-100 hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-gray-800 flex items-center space-x-2">
-                  <MessageCircle className="h-5 w-5 text-sky-500" />
-                  <span>Thông Tin Liên Hệ</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start space-x-4">
-                  <div className="bg-sky-100 p-3 rounded-full">
-                    <MapPin className="h-6 w-6 text-sky-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800 mb-1">Địa chỉ</h3>
-                    <p className="text-gray-600">Trường Đại học Tài nguyên và Môi trường Hà Nội</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="bg-sky-100 p-3 rounded-full">
-                    <Phone className="h-6 w-6 text-sky-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800 mb-1">Điện thoại</h3>
-                    <p className="text-gray-600">Hotline: 0123 456 789</p>
-                    <p className="text-gray-600">Zalo: 0987 654 321</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="bg-sky-100 p-3 rounded-full">
-                    <Mail className="h-6 w-6 text-sky-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800 mb-1">Email</h3>
-                    <p className="text-gray-600">info@carrental.vn</p>
-                    <p className="text-gray-600">support@carrental.vn</p>
-                  </div>
-                </div>
-                <div className="flex items-start space-x-4">
-                  <div className="bg-sky-100 p-3 rounded-full">
-                    <Clock className="h-6 w-6 text-sky-500" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-gray-800 mb-1">Giờ làm việc</h3>
-                    <p className="text-gray-600">Thứ 2 - Chủ nhật: 6:00 - 22:00</p>
-                    <p className="text-gray-600">Hỗ trợ khẩn cấp: 24/7</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Quick Contact */}
-            <Card className="border-sky-100 hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-gray-800">Liên Hệ Nhanh</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <Button className="w-full bg-green-500 hover:bg-green-600 text-white hover:scale-105 transition-all duration-300">
-                  <Phone className="h-4 w-4 mr-2" />
-                  Gọi Ngay: 0123 456 789
-                </Button>
-                <Button className="w-full bg-blue-500 hover:bg-blue-600 text-white hover:scale-105 transition-all duration-300">
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  Chat Zalo
-                </Button>
-                <Button
-                  variant="outline"
-                  className="w-full border-sky-200 text-sky-600 hover:bg-sky-50 bg-transparent hover:scale-105 transition-all duration-300"
+              <div className="flex items-center gap-3">
+                <div
+                    className={[
+                      "inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium",
+                      connected ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+                    ].join(" ")}
                 >
-                  <Mail className="h-4 w-4 mr-2" />
-                  Gửi Email
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
+                  {connected ? (
+                      <>
+                        <Wifi className="h-4 w-4" /> Đang kết nối
+                      </>
+                  ) : (
+                      <>
+                        <WifiOff className="h-4 w-4" /> Mất kết nối
+                      </>
+                  )}
+                </div>
 
-          {/* Contact Form */}
-          <div className="lg:col-span-2">
-            <Card className="border-sky-100 hover:shadow-lg transition-shadow duration-300">
-              <CardHeader>
-                <CardTitle className="text-gray-800">Gửi Tin Nhắn Cho Chúng Tôi</CardTitle>
-                <p className="text-gray-600">Điền thông tin bên dưới và chúng tôi sẽ liên hệ lại trong vòng 24h</p>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Họ và tên *</Label>
-                      <Input
-                        id="name"
-                        placeholder="Nhập họ và tên của bạn"
-                        value={formData.name}
-                        onChange={(e) => handleInputChange("name", e.target.value)}
-                        className="border-sky-200 focus:border-sky-500"
-                        required
-                      />
+                <div className="hidden sm:flex items-center gap-2 rounded-full bg-sky-50 text-sky-700 px-3 py-1 text-sm">
+                  <ShieldCheck className="h-4 w-4" />
+                  <span>User: {userId ?? "N/A"}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-6 sm:py-10">
+          <div className="grid lg:grid-cols-12 gap-6">
+            {/* Left panel */}
+            <aside className="lg:col-span-4 space-y-6">
+              <Card className="border-sky-100 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-gray-900">
+                    <MessageCircle className="h-5 w-5 text-sky-600" />
+                    Thông tin liên hệ
+                  </CardTitle>
+                </CardHeader>
+
+                <CardContent className="space-y-4 text-gray-700">
+                  <div className="flex items-start gap-3">
+                    <div className="bg-sky-100 p-2 rounded-xl">
+                      <MapPin className="h-5 w-5 text-sky-700" />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="Nhập email của bạn"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange("email", e.target.value)}
-                        className="border-sky-200 focus:border-sky-500"
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Số điện thoại *</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="Nhập số điện thoại"
-                        value={formData.phone}
-                        onChange={(e) => handleInputChange("phone", e.target.value)}
-                        className="border-sky-200 focus:border-sky-500"
-                        required
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="subject">Chủ đề</Label>
-                      <Select value={formData.subject} onValueChange={(value) => handleInputChange("subject", value)}>
-                        <SelectTrigger className="border-sky-200">
-                          <SelectValue placeholder="Chọn chủ đề" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="booking">Đặt xe</SelectItem>
-                          <SelectItem value="support">Hỗ trợ kỹ thuật</SelectItem>
-                          <SelectItem value="complaint">Khiếu nại</SelectItem>
-                          <SelectItem value="partnership">Hợp tác</SelectItem>
-                          <SelectItem value="other">Khác</SelectItem>
-                        </SelectContent>
-                      </Select>
+                    <div>
+                      <p className="font-semibold">Địa chỉ</p>
+                      <p className="text-gray-600">
+                        Trường Đại học Tài nguyên và Môi trường Hà Nội
+                      </p>
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="message">Tin nhắn *</Label>
-                    <Textarea
-                      id="message"
-                      placeholder="Nhập nội dung tin nhắn của bạn..."
-                      value={formData.message}
-                      onChange={(e) => handleInputChange("message", e.target.value)}
-                      className="border-sky-200 focus:border-sky-500 min-h-32"
-                      required
-                    />
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-sky-100 p-2 rounded-xl">
+                      <Phone className="h-5 w-5 text-sky-700" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Hotline</p>
+                      <p className="text-gray-600">0123 456 789</p>
+                    </div>
                   </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-sky-500 hover:bg-sky-600 text-white hover:scale-105 transition-all duration-300"
-                    disabled={!formData.name || !formData.email || !formData.phone || !formData.message}
+
+                  <div className="flex items-start gap-3">
+                    <div className="bg-sky-100 p-2 rounded-xl">
+                      <Clock className="h-5 w-5 text-sky-700" />
+                    </div>
+                    <div>
+                      <p className="font-semibold">Giờ hỗ trợ</p>
+                      <p className="text-gray-600">06:00 – 22:00 (khẩn cấp 24/7)</p>
+                    </div>
+                  </div>
+
+                  {/*<div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">*/}
+                  {/*  <p className="text-sm font-semibold text-gray-900">Trạng thái phiên</p>*/}
+                  {/*  <div className="mt-2 space-y-1 text-sm text-gray-600">*/}
+                  {/*    <p>*/}
+                  {/*      <span className="text-gray-500">ShopId:</span> {adminId}*/}
+                  {/*    </p>*/}
+                  {/*    <p className="break-all">*/}
+                  {/*      <span className="text-gray-500">Topic:</span> {topic ?? "-"}*/}
+                  {/*    </p>*/}
+                  {/*    <p>*/}
+                  {/*      <span className="text-gray-500">UserId:</span>{" "}*/}
+                  {/*      {userId ?? "Chưa đăng nhập / thiếu userId trong localStorage"}*/}
+                  {/*    </p>*/}
+                  {/*  </div>*/}
+                  {/*</div>*/}
+
+                  <div className="flex gap-3">
+                    <Link href="/user/services" className="flex-1">
+                      <Button variant="outline" className="w-full rounded-xl">
+                        Xem dịch vụ
+                      </Button>
+                    </Link>
+                    <Link href="/user/cars" className="flex-1">
+                      <Button className="w-full bg-sky-600 hover:bg-sky-700 rounded-xl">
+                        Xem xe
+                      </Button>
+                    </Link>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <div className="hidden lg:block text-xs text-gray-500">
+                Tip: Nếu mất kết nối, hệ thống sẽ tự reconnect.
+              </div>
+            </aside>
+
+            {/* Chat panel */}
+            <section className="lg:col-span-8">
+              <Card className="border-sky-100 shadow-sm overflow-hidden">
+                <CardHeader className="bg-white">
+                  <div className="flex items-center justify-between">
+                    <CardTitle className="text-gray-900">Hộp thoại</CardTitle>
+                    <div className="text-xs text-gray-500">
+                      {connected ? "Realtime" : "Đang reconnect..."}
+                    </div>
+                  </div>
+
+                  <p className="text-sm text-gray-600 mt-1">
+                    Gửi tin nhắn để được hỗ trợ nhanh
+                  </p>
+                </CardHeader>
+
+                <CardContent className="p-0">
+                  {/* Messages */}
+                  <div
+                      ref={listRef}
+                      className="h-[520px] sm:h-[600px] overflow-y-auto bg-gradient-to-b from-sky-50 to-white px-3 py-4 sm:px-5 space-y-3"
                   >
-                    <Send className="h-4 w-4 mr-2" />
-                    Gửi Tin Nhắn
-                  </Button>
-                </form>
-              </CardContent>
-            </Card>
+                    {loading ? (
+                        <div className="text-center text-gray-500 text-sm py-14">
+                          Đang tải lịch sử chat...
+                        </div>
+                    ) : err ? (
+                        <div className="text-center text-rose-600 text-sm py-10">
+                          {err}
+                          <button
+                              className="underline ml-2"
+                              onClick={async () => {
+                                if (!userId) return
+                                try {
+                                  setErr("")
+                                  setLoading(true)
+                                  const data = await getConversation()
+                                  setMessages(data || [])
+                                } catch (e: any) {
+                                  setErr(e?.message || "Không tải được lịch sử chat")
+                                } finally {
+                                  setLoading(false)
+                                  scrollToBottom()
+                                }
+                              }}
+                          >
+                            Thử lại
+                          </button>
+                        </div>
+                    ) : messages.length === 0 ? (
+                        <div className="text-center text-gray-500 text-sm py-14">
+                          Chưa có tin nhắn. Hãy gửi lời chào 👋
+                        </div>
+                    ) : (
+                        messages.map((m, idx) => {
+                          const isMe = m.senderId === userId
+                          const key = `${m.timestamp}-${idx}`
+
+                          return (
+                              <div key={key} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
+                                {/* Avatar nhỏ */}
+                                {!isMe && (
+                                    <div className="mr-2 mt-1 hidden sm:block">
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarImage src={adminAvatar || "/default-avatar.png"} alt="Admin" />
+                                        <AvatarFallback>AD</AvatarFallback>
+                                      </Avatar>
+                                    </div>
+                                )}
+
+                                <div className={`max-w-[86%] sm:max-w-[75%]`}>
+                                  <div
+                                      className={[
+                                        "rounded-2xl px-4 py-3 shadow-sm",
+                                        isMe
+                                            ? "bg-sky-600 text-white rounded-br-md"
+                                            : "bg-white text-gray-900 border border-sky-100 rounded-bl-md",
+                                      ].join(" ")}
+                                  >
+                                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{m.content}</p>
+                                  </div>
+
+                                  <div
+                                      className={[
+                                        "mt-1 text-[11px] px-1",
+                                        isMe ? "text-right text-gray-500" : "text-left text-gray-500",
+                                      ].join(" ")}
+                                  >
+                                    {fmtTime(m.timestamp)}
+                                  </div>
+                                </div>
+
+                                {isMe && (
+                                    <div className="ml-2 mt-1 hidden sm:block">
+                                      <Avatar className="h-8 w-8">
+                                        <AvatarImage src={myAvatar || "/default-avatar.png"} alt="Me" />
+                                        <AvatarFallback>ME</AvatarFallback>
+                                      </Avatar>
+                                    </div>
+                                )}
+                              </div>
+                          )
+                        })
+                    )}
+                  </div>
+
+                  {/* Composer */}
+                  <div className="border-t border-sky-100 bg-white p-3 sm:p-4">
+                    <div className="flex items-center gap-3">
+                      <Input
+                          value={text}
+                          onChange={(e) => setText(e.target.value)}
+                          placeholder={userId ? "Nhập tin nhắn..." : "Vui lòng đăng nhập để chat"}
+                          className="border-sky-200 focus:border-sky-500 rounded-xl"
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") onSend()
+                          }}
+                          disabled={!userId}
+                      />
+
+                      <Button
+                          onClick={onSend}
+                          className="bg-sky-600 hover:bg-sky-700 rounded-xl"
+                          disabled={!text.trim() || !userId}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Gửi
+                      </Button>
+                    </div>
+
+                    <div className="mt-2 flex items-center justify-between text-xs text-gray-500">
+                      <span>{connected ? "Đã kết nối" : "Đang tự reconnect..."}</span>
+                      <span className="hidden sm:inline">Enter để gửi</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
           </div>
-        </div>
-
-        {/* Map Section */}
-        <div className="mt-12">
-          <Card className="border-sky-100 hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="text-gray-800">Vị Trí Của Chúng Tôi</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="w-full h-96 rounded-b-lg overflow-hidden">
-                <iframe
-                    title="Bản đồ Trường Đại học Tài nguyên và Môi trường Hà Nội"
-                    className="w-full h-full"
-                    loading="lazy"
-                    referrerPolicy="no-referrer-when-downgrade"
-                    src="https://www.google.com/maps?q=Tr%C6%B0%E1%BB%9Dng%20%C4%90%E1%BA%A1i%20h%E1%BB%8Dc%20T%C3%A0i%20nguy%C3%AAn%20v%C3%A0%20M%C3%B4i%20tr%C6%B0%E1%BB%9Dng%20H%C3%A0%20N%E1%BB%99i&output=embed"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mt-12">
-          <Card className="border-sky-100 hover:shadow-lg transition-shadow duration-300">
-            <CardHeader>
-              <CardTitle className="text-gray-800">Câu Hỏi Thường Gặp</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Làm thế nào để đặt xe?</h3>
-                <p className="text-gray-600">
-                  Bạn có thể đặt xe trực tuyến qua website, gọi hotline 0123 456 789, hoặc nhắn tin Zalo. Chúng tôi sẽ
-                  xác nhận và giao xe theo yêu cầu.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Cần giấy tờ gì để thuê xe?</h3>
-                <p className="text-gray-600">
-                  Bạn cần có GPLX hạng B2 trở lên, CCCD/CMND, và đặt cọc theo quy định. Chúng tôi sẽ hướng dẫn chi tiết
-                  khi bạn liên hệ.
-                </p>
-              </div>
-              <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Có hỗ trợ giao xe tận nơi không?</h3>
-                <p className="text-gray-600">
-                  Có, chúng tôi hỗ trợ giao xe tận nơi trong nội thành thành phố Hà Nội. Phí giao xe sẽ được tính theo khoảng cách
-                  và thời gian.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+        </main>
       </div>
-    </div>
   )
 }
