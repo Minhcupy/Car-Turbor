@@ -11,9 +11,11 @@ import java.util.List;
 @Repository
 public interface MessageRepository extends JpaRepository<Message, Integer> {
 
-    @Query("SELECT m FROM Message m WHERE " +
-            "(m.sender.userId = :userId AND m.receiver.userId = :adminId) OR " +
-            "(m.sender.userId = :adminId AND m.receiver.userId = :userId) " +
+    @Query("SELECT m FROM Message m " +
+            "JOIN FETCH m.sender " +
+            "JOIN FETCH m.receiver " +
+            "WHERE (m.sender.userId = :userId AND m.receiver.userId = :adminId) " +
+            "   OR (m.sender.userId = :adminId AND m.receiver.userId = :userId) " +
             "ORDER BY m.timestamp ASC")
     List<Message> findConversation(@Param("userId") Integer userId,
                                    @Param("adminId") Integer adminId);

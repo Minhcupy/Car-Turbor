@@ -57,9 +57,10 @@ public class SecurityConfiguration {
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(request -> {
                     CorsConfiguration config = new CorsConfiguration();
-                    config.setAllowedOrigins(Arrays.asList("http://localhost:3000")); // FE Next.js
+                    config.setAllowedOrigins(Arrays.asList("http://localhost:3000"));
                     config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-                    config.setAllowedHeaders(Arrays.asList("Authorization", "Content-Type"));
+                    config.setAllowedHeaders(Arrays.asList("*"));
+                    config.setExposedHeaders(Arrays.asList("Authorization"));
                     config.setAllowCredentials(true);
                     return config;
                 }))
@@ -79,11 +80,13 @@ public class SecurityConfiguration {
                                 "/api/user/cars/**",
                                 "/api/user/cars/featured"
                         ).permitAll()
+                        .requestMatchers("/ws/**", "/ws-chat/**", "/api/chat/**").permitAll()
                         .requestMatchers("/api/chatbot").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/user/me/avatar").authenticated()
 
                         // 2. USER + ADMIN (phải login mới được gọi)
                         .requestMatchers("/api/messages/**").authenticated()
+                        .requestMatchers("/api/chat/**").authenticated()
 
                         .requestMatchers("/api/user/bookings/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/user/payments/**").hasAnyRole("USER", "ADMIN")
@@ -91,7 +94,7 @@ public class SecurityConfiguration {
 
                         // 3. ADMIN ONLY
                         // 3. ADMIN (chỉ cần login là được)
-                        .requestMatchers("/api/admin/**").permitAll() //
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/cars/**").hasRole("ADMIN") //
                         .requestMatchers(HttpMethod.GET, "/api/brands/**").permitAll()
                         // Xem được không cần login
