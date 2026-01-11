@@ -13,7 +13,7 @@ export default function Footer() {
           {/* Logo + mô tả */}
           <div>
             <h2 className="text-2xl font-bold mb-4 text-white">
-              Car<span className="text-sky-400">book</span>
+              Car<span className="text-sky-400">Turbor</span>
             </h2>
             <p className="mb-6 text-sm leading-relaxed">
               Nền tảng thuê xe hiện đại, nhanh chóng và tiện lợi. Giúp bạn dễ dàng

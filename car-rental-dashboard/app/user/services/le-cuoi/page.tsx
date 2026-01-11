@@ -119,8 +119,8 @@ export default function LeCuoiPage() {
                         <div className="max-w-3xl">
                             <h1 className="text-3xl md:text-4xl font-bold text-white drop-shadow-lg">Dịch vụ xe cưới</h1>
                             <p className="mt-2 text-sky-100/90 leading-relaxed">
-                                Xe cưới sang trọng, lịch sự, phù hợp trang trí theo concept. Danh sách xe bên dưới lấy từ API
-                                <span className="font-semibold"> /api/user/cars</span>.
+                                Xe cưới sang trọng, lịch sự, phù hợp trang trí theo concept.
+                                {/*<span className="font-semibold"></span>*/}
                             </p>
 
                             <div className="mt-6 flex flex-col sm:flex-row gap-3">

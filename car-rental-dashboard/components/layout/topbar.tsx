@@ -86,7 +86,7 @@ export function Topbar() {
               <DropdownMenuLabel className="font-normal">
                 <div className="flex flex-col space-y-1">
                   <p className="text-sm font-medium leading-none">Admin User</p>
-                  <p className="text-xs leading-none text-muted-foreground">admin@carrental.com</p>
+                  <p className="text-xs leading-none text-muted-foreground">admin@CarTurbo.com</p>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

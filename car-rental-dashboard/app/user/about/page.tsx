@@ -77,7 +77,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="max-w-3xl mx-auto text-center">
             <h1 className="text-4xl font-bold text-gray-800 mb-6 text-balance">
-              Về CarRental - Đối Tác Tin Cậy Của Bạn
+              Về CarTurbo - Đối Tác Tin Cậy Của Bạn
             </h1>
             <p className="text-xl text-gray-600 leading-relaxed">
               Với hơn 10 năm kinh nghiệm trong ngành cho thuê xe, chúng tôi cam kết mang đến dịch vụ tốt nhất với đội xe
@@ -95,7 +95,7 @@ export default function AboutPage() {
               <h2 className="text-3xl font-bold text-gray-800 mb-6">Câu Chuyện Của Chúng Tôi</h2>
               <div className="space-y-4 text-gray-600 leading-relaxed">
                 <p>
-                  CarRental được thành lập vào năm 2014 với mục tiêu đơn giản: cung cấp dịch vụ cho thuê xe chất lượng
+                  CarTurbo được thành lập vào năm 2014 với mục tiêu đơn giản: cung cấp dịch vụ cho thuê xe chất lượng
                   cao, đáng tin cậy và giá cả hợp lý cho mọi người.
                 </p>
                 <p>
@@ -111,7 +111,7 @@ export default function AboutPage() {
             <div>
               <img
                 src="/about-story-image.jpg"
-                alt="Câu chuyện CarRental"
+                alt="Câu chuyện CarTurbo"
                 className="w-full h-96 object-cover rounded-lg shadow-lg"
               />
             </div>
@@ -125,7 +125,7 @@ export default function AboutPage() {
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Thành Tựu Của Chúng Tôi</h2>
             <p className="text-gray-600 max-w-2xl mx-auto">
-              Những con số ấn tượng chứng minh cho sự tin cậy và chất lượng dịch vụ của CarRental
+              Những con số ấn tượng chứng minh cho sự tin cậy và chất lượng dịch vụ của CarTurbo
             </p>
           </div>
           <div className="grid md:grid-cols-4 gap-8">
@@ -191,7 +191,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-800 mb-4">Đội Ngũ Lãnh Đạo</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">Những người dẫn dắt CarRental hướng tới thành công</p>
+            <p className="text-gray-600 max-w-2xl mx-auto">Những người dẫn dắt CarTurbo hướng tới thành công</p>
           </div>
           <div className="grid md:grid-cols-3 gap-8">
             {teamMembers.map((member, index) => (
@@ -217,7 +217,7 @@ export default function AboutPage() {
         <div className="container mx-auto px-4 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">Sẵn Sàng Trải Nghiệm Dịch Vụ?</h2>
           <p className="text-sky-100 text-lg mb-8 max-w-2xl mx-auto">
-            Hãy để CarRental đồng hành cùng bạn trong mọi chuyến đi
+            Hãy để CarTurbo đồng hành cùng bạn trong mọi chuyến đi
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link href="/cars">

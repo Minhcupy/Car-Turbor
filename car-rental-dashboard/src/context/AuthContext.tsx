@@ -10,6 +10,7 @@ export interface AuthState {
     email?: string
     avatar?: string
     roles?: string[]
+    accessToken?: string
 }
 
 interface AuthContextProps {
@@ -38,28 +39,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Kiểm tra token + load user khi mount
     useEffect(() => {
         const token = getAccessToken()
+
         if (!token) {
             setLoading(false)
             return
         }
 
+        // 1) Có token => cho UI coi như đã đăng nhập trước
+        setAuth((prev) => ({
+            ...prev,
+            isLoggedIn: true,
+            accessToken: token,
+        }))
+
+        // 2) Sau đó mới fetch profile
         getCurrentUser()
             .then((res) => {
                 setAuth({
                     isLoggedIn: true,
-                    userName: res.userName,
+                    userName: res.userName ?? "",
                     email: res.userEmail,
                     avatar: res.avatarUrl,
                     roles: res.roles,
+                    accessToken: token,
                 })
             })
-            .catch(() => {
-                logout()
+            .catch((err) => {
+                // Nếu bạn muốn: chỉ logout khi chắc chắn token sai (401)
+                // Nếu không bắt được status ở đây, tạm thời KHÔNG redirect gấp
+                console.error("getCurrentUser failed:", err)
+
+                // lựa chọn A: giữ đăng nhập nhưng thiếu profile
+                setAuth((prev) => ({ ...prev, isLoggedIn: true }))
+
+                // lựa chọn B: vẫn logout như cũ (cứng)
+                // logout()
             })
-            .finally(() => {
-                setLoading(false)
-            })
+            .finally(() => setLoading(false))
     }, [logout])
+
 
     return (
         <AuthContext.Provider value={{ auth, setAuth, logout, loading }}>
