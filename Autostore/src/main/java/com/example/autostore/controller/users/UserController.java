@@ -2,6 +2,7 @@ package com.example.autostore.controller.users;
 
 import com.example.autostore.dto.UserResponseDTO;
 import com.example.autostore.dto.user.UpdateUserDTO;
+import com.example.autostore.dto.user.UserBriefDTO;
 import com.example.autostore.dto.user.UserProfileDTO;
 import com.example.autostore.service.user.interfaces.IUserService;
 import lombok.AccessLevel;
@@ -10,6 +11,7 @@ import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -88,5 +90,12 @@ public class UserController {
             return ResponseEntity.status(404).body("User not found");
         }
         return ResponseEntity.ok("Account deleted successfully");
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserBriefDTO> getUserById(@PathVariable Integer id) {
+        UserBriefDTO user = userService.getUserBriefById(id);
+        return ResponseEntity.ok(user);
     }
 }

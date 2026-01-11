@@ -2,6 +2,7 @@ package com.example.autostore.service.user.implement;
 
 import com.example.autostore.dto.UserResponseDTO;
 import com.example.autostore.dto.user.UpdateUserDTO;
+import com.example.autostore.dto.user.UserBriefDTO;
 import com.example.autostore.dto.user.UserProfileDTO;
 import com.example.autostore.model.AppUser;
 import com.example.autostore.repository.UserRepository;
@@ -125,4 +126,16 @@ public class UserService implements IUserService {
                 roleNames
         );
     }
+    @Override
+    public UserBriefDTO getUserBriefById(Integer id) {
+        AppUser user = userRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        return new UserBriefDTO(
+                user.getUserId(),
+                user.getUserName(),
+                user.getAvatarUrl()
+        );
+    }
+
 }
