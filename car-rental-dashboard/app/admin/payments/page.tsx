@@ -24,10 +24,10 @@ export default function PaymentsPage() {
   const [keyword, setKeyword] = useState("")
   const [status, setStatus] = useState<PaymentStatus | undefined>(undefined)
 
-  const fetchPayments = async () => {
+  const fetchPayments = async (pageArg = page) => {
     try {
       setLoading(true)
-      const data = await apiPayment.getPage(page, pageSize, keyword, status)
+      const data = await apiPayment.getPage(pageArg, pageSize, keyword, status)
       setPageData(data)
     } catch (error) {
       console.error("Failed to fetch payments:", error)
@@ -37,12 +37,12 @@ export default function PaymentsPage() {
   }
 
   useEffect(() => {
-    fetchPayments()
+    fetchPayments(page)
   }, [page, status])
 
   const handleSearch = () => {
-    setPage(0) // reset về trang đầu
-    fetchPayments()
+    setPage(0)
+    fetchPayments(0)
   }
 
   const handleStatusChange = async (id: number, newStatus: PaymentStatus) => {
@@ -66,7 +66,7 @@ export default function PaymentsPage() {
 
   const columns = [
     { key: "paymentId", label: "Mã giao dịch" },
-    { key: "bookingId", label: "Mã đặt xe" },
+    // { key: "bookingId", label: "Mã đặt xe" },
     { key: "customerName", label: "Khách hàng" },
     { key: "carName", label: "Xe" },
     {

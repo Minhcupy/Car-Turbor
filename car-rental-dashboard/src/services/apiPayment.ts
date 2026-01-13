@@ -1,9 +1,7 @@
-import axios from "axios"
+import api from "./user/api"
 
-// Các trạng thái thanh toán (theo enum bên BE)
 export type PaymentStatus = "PENDING" | "SUCCESS" | "FAILED" | "REFUNDED"
 
-// DTO trả về từ BE
 export interface PaymentDTO {
     paymentId: number
     bookingId: number
@@ -15,7 +13,6 @@ export interface PaymentDTO {
     paymentDate: string
 }
 
-// Page response chuẩn (theo PageResponse<PaymentDTO> ở BE)
 export interface PageResponse<T> {
     content: T[]
     pageNumber: number
@@ -26,10 +23,9 @@ export interface PageResponse<T> {
     last: boolean
 }
 
-const API_URL = "http://localhost:8080/api/admin/payments"
+const API_URL = "/admin/payments" // ✅ dùng relative vì baseURL đã có /api
 
 export const apiPayment = {
-    // ✅ Lấy danh sách có phân trang + tìm kiếm + filter
     getPage: async (
         page: number,
         size: number,
@@ -37,32 +33,28 @@ export const apiPayment = {
         status?: PaymentStatus,
         customerId?: number
     ): Promise<PageResponse<PaymentDTO>> => {
-        const res = await axios.get<PageResponse<PaymentDTO>>(API_URL, {
+        const res = await api.get<PageResponse<PaymentDTO>>(API_URL, {
             params: { page, size, keyword, status, customerId },
         })
         return res.data
     },
 
-    // ✅ Lấy chi tiết theo ID
     getById: async (id: number): Promise<PaymentDTO> => {
-        const res = await axios.get<PaymentDTO>(`${API_URL}/${id}`)
+        const res = await api.get<PaymentDTO>(`${API_URL}/${id}`)
         return res.data
     },
 
-    // ✅ Cập nhật hoặc tạo Payment (Admin chỉnh sửa)
     save: async (payment: PaymentDTO): Promise<PaymentDTO> => {
-        const res = await axios.post<PaymentDTO>(API_URL, payment)
+        const res = await api.post<PaymentDTO>(API_URL, payment)
         return res.data
     },
 
-    // ✅ Xóa Payment
     delete: async (id: number): Promise<void> => {
-        await axios.delete(`${API_URL}/${id}`)
+        await api.delete(`${API_URL}/${id}`)
     },
 
-    // ✅ Cập nhật trạng thái Payment
     updateStatus: async (id: number, status: PaymentStatus): Promise<PaymentDTO> => {
-        const res = await axios.put<PaymentDTO>(`${API_URL}/${id}/status`, null, {
+        const res = await api.put<PaymentDTO>(`${API_URL}/${id}/status`, null, {
             params: { status },
         })
         return res.data
