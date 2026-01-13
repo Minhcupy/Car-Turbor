@@ -11,7 +11,7 @@ public class PaymentMapper {
         return new PaymentDTO(
                 payment.getPaymentId(),
                 payment.getBooking().getBookingId(),
-                payment.getBooking().getCustomer().getCustomerName(),
+                payment.getBooking().getCustomer().getAppUser().getUserFullName(),
                 payment.getBooking().getCar().getCarName(),
                 payment.getAmount(),
                 payment.getPaymentMethod(),

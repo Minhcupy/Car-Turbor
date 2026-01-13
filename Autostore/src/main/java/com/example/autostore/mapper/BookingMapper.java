@@ -23,7 +23,7 @@ public class BookingMapper {
         dto.setStatus(booking.getStatus() != null ? booking.getStatus().name() : null);
 
         if (booking.getCustomer() != null) {
-            dto.setCustomerName(booking.getCustomer().getCustomerName());
+            dto.setCustomerName(booking.getCustomer().getAppUser().getUserFullName());
             dto.setCustomerPhone(booking.getCustomer().getCustomerPhone());
         }
 

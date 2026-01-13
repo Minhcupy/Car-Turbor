@@ -18,30 +18,48 @@ public interface ICustomerRepository extends JpaRepository<Customer, Integer> {
     Optional<Customer> findByCustomerEmail(String customerEmail);
     Optional<Customer> findByAppUser(AppUser appUser);
 
-    @Query(value = "SELECT c.customer_id AS customerId, " +
-            "c.customer_name AS customerName, " +
-            "c.customer_email AS customerEmail, " +
-            "c.customer_phone AS customerPhone, " +
-            "c.customer_address AS customerAddress, " +
-            "c.status AS status, " +
-            "MAX(b.created_at) AS lastBookingDate, " +
-            "COUNT(b.booking_id) AS totalBookings, " +
-            "(SELECT car.car_name " +
-            "   FROM booking b2 " +
-            "   JOIN car car ON car.car_id = b2.car_id " +
-            "   WHERE b2.customer_id = c.customer_id " +
-            "   ORDER BY b2.created_at DESC LIMIT 1) AS lastCarName " +
-            "FROM customers c " +
-            "JOIN booking b ON b.customer_id = c.customer_id " +
-            "WHERE (:keyword IS NULL OR LOWER(c.customer_name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "   OR LOWER(c.customer_email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-            "   OR LOWER(c.customer_phone) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-            "GROUP BY c.customer_id",
-            countQuery = "SELECT COUNT(DISTINCT c.customer_id) " +
-                    "FROM customers c JOIN booking b ON b.customer_id = c.customer_id " +
-                    "WHERE (:keyword IS NULL OR LOWER(c.customer_name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "   OR LOWER(c.customer_email) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-                    "   OR LOWER(c.customer_phone) LIKE LOWER(CONCAT('%', :keyword, '%')))",
+    @Query(value = """
+    SELECT 
+        c.customer_id AS customerId,
+        u.user_full_name AS customerName,
+        c.customer_email AS customerEmail,
+        c.customer_phone AS customerPhone,
+        c.customer_address AS customerAddress,
+        c.status AS status,
+        MAX(b.created_at) AS lastBookingDate,
+        COUNT(b.booking_id) AS totalBookings,
+        (
+            SELECT car.car_name
+            FROM booking b2
+            JOIN car car ON car.car_id = b2.car_id
+            WHERE b2.customer_id = c.customer_id
+            ORDER BY b2.created_at DESC
+            LIMIT 1
+        ) AS lastCarName
+    FROM customers c
+    JOIN users u ON u.user_id = c.user_id
+    JOIN booking b ON b.customer_id = c.customer_id
+    WHERE (
+        :keyword IS NULL 
+        OR LOWER(u.user_full_name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(c.customer_email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(c.customer_phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    )
+    GROUP BY 
+        c.customer_id, u.user_full_name, c.customer_email, c.customer_phone, c.customer_address, c.status
+    """,
+            countQuery = """
+    SELECT COUNT(DISTINCT c.customer_id)
+    FROM customers c
+    JOIN users u ON u.user_id = c.user_id
+    JOIN booking b ON b.customer_id = c.customer_id
+    WHERE (
+        :keyword IS NULL 
+        OR LOWER(u.user_full_name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(c.customer_email) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        OR LOWER(c.customer_phone) LIKE LOWER(CONCAT('%', :keyword, '%'))
+    )
+    """,
             nativeQuery = true)
     Page<CustomerBookingProjection> findCustomerBookingSummary(@Param("keyword") String keyword, Pageable pageable);
 

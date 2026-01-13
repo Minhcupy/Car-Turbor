@@ -53,5 +53,4 @@ public class AppUser {
     @OneToOne(mappedBy = "appUser", cascade = CascadeType.ALL)
     private Customer customer;
 
-
 }

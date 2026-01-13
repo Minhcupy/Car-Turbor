@@ -1,5 +1,6 @@
 package com.example.autostore.controller;
 
+import com.example.autostore.Enum.CustomerStatus;
 import com.example.autostore.Enum.ERole;
 import com.example.autostore.dto.JwtResponse;
 import com.example.autostore.dto.SignInRequest;
@@ -99,6 +100,9 @@ public class AuthController {
         user.setUserIsActive(true);
         user.setRoles(roles);
 
+        user.setUserFullName(signUpRequest.getUserFullName());
+        user.setUserPhone(signUpRequest.getUserPhone());
+
         AppUser savedUser = userRepository.save(user);
 
         // ✅ Tạo Customer gắn với user mới đăng ký
@@ -107,6 +111,7 @@ public class AuthController {
         customer.setCustomerName(signUpRequest.getUserFullName());
         customer.setCustomerEmail(signUpRequest.getEmail());
         customer.setCustomerPhone(signUpRequest.getUserPhone());
+        customer.setStatus(CustomerStatus.ACTIVE);
         customer.setCustomerAddress("");
         customerRepository.save(customer);
 
