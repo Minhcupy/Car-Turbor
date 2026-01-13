@@ -1,4 +1,4 @@
-import axios from "axios"
+import api from "./user/api"
 
 export type BookingStatus = "PENDING" | "CONFIRMED" | "CANCELED" | "COMPLETED"
 
@@ -15,7 +15,6 @@ export interface Booking {
     notes?: string
     status: BookingStatus
 
-    // Flatten từ DTO
     customerName: string
     customerPhone: string
     carName: string
@@ -31,41 +30,35 @@ export interface Page<T> {
     first: boolean
     last: boolean
 }
-const API_URL = "http://localhost:8080/api/admin/bookings"
+
+const API_URL = "/admin/bookings" // ✅ baseURL đã là http://localhost:8080/api
 
 export const bookingsApi = {
-    // ✅ Lấy danh sách + tìm kiếm + phân trang
-    getPage: async (
-        page: number,
-        size: number,
-        keyword?: string
-    ): Promise<Page<Booking>> => {
-        const res = await axios.get<Page<Booking>>(API_URL, {
+    getPage: async (page: number, size: number, keyword?: string): Promise<Page<Booking>> => {
+        const res = await api.get<Page<Booking>>(API_URL, {
             params: { page, size, keyword },
         })
         return res.data
     },
 
-    // Lấy chi tiết booking theo ID
     getById: async (id: number): Promise<Booking> => {
-        const res = await axios.get<Booking>(`${API_URL}/${id}`)
+        const res = await api.get<Booking>(`${API_URL}/${id}`)
         return res.data
     },
 
-    // Cập nhật trạng thái booking
     updateStatus: async (id: number, status: BookingStatus): Promise<Booking> => {
-        const res = await axios.put<Booking>(`${API_URL}/${id}/status`, null, {
+        const res = await api.put<Booking>(`${API_URL}/${id}/status`, null, {
             params: { status },
         })
         return res.data
     },
 
-    // Xóa booking
     delete: async (id: number): Promise<void> => {
-        await axios.delete(`${API_URL}/${id}`)
+        await api.delete(`${API_URL}/${id}`)
     },
 
-    // Lấy QR code (ảnh PNG)
+
+// Lấy QR code (ảnh PNG)
     getQRCodeUrl: (id: number): string => {
         return `${API_URL}/${id}/qrcode`
     },

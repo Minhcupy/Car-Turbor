@@ -11,12 +11,13 @@ const api = axios.create({
 
 // Gắn accessToken vào mỗi request
 api.interceptors.request.use((config) => {
-    const token = getAccessToken();
-    if (token && config.headers) {
-        config.headers.Authorization = `Bearer ${token}`;
+    const token = getAccessToken()
+    if (token) {
+        config.headers = config.headers ?? {}
+        config.headers.Authorization = `Bearer ${token}`
     }
-    return config;
-});
+    return config
+})
 
 // Xử lý khi gặp lỗi 401 → refresh token
 let isRefreshing = false;

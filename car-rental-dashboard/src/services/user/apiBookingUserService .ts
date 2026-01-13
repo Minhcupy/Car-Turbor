@@ -7,7 +7,7 @@ export interface CarItem {
     brandName: string        // hãng xe
     typeName: string         // loại xe
     // giá thuê 1 ngày
-    status: "AVAILABLE" | "UNAVAILABLE" | "MAINTENANCE" // trạng thái
+    status: "AVAILABLE" | "RENTED" | "MAINTENANCE"
     // thông tin bổ sung (optional)
     imageUrl?: string        // ảnh chính
     seats?: number           // số chỗ ngồi
@@ -78,6 +78,20 @@ export interface BookingPreviewDTO {
     depositAmount: number
 }
 
+export type BusySlotDTO = {
+    startDT: string
+    endDT: string
+    status: "PENDING" | "CONFIRMED" | "CANCELED" | "COMPLETED"
+}
+
+export type AvailabilityDTO = {
+    available: boolean
+    availableUnits: number
+    busyUnits: number
+    baseAvailable: number
+    message: string
+    busySlots: BusySlotDTO[] // ✅ thêm
+}
 
 // ====================== Car Service ======================
 export const carApi = {
@@ -126,4 +140,10 @@ export const bookingApi = {
         return res.data
     },
 
+    async checkAvailability(carId: number, startDT: string, endDT: string): Promise<AvailabilityDTO> {
+        const res = await api.get<AvailabilityDTO>("/user/bookings/availability", {
+            params: { carId, startDT, endDT },
+        })
+        return res.data
+    },
 }
