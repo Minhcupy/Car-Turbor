@@ -34,7 +34,7 @@ export default function Step1CarSelection({
     // Fix đường dẫn ảnh BE
     const baseUrl = process.env.NEXT_PUBLIC_API_URL || ""
     const mainImage = selectedCar.imageUrl
-        ? `${baseUrl}${selectedCar.imageUrl}`
+        ? `${selectedCar.imageUrl}`
         : "/placeholder.svg"
 
     return (
@@ -66,7 +66,7 @@ export default function Step1CarSelection({
                                                 {(selectedCar.gallery ?? []).map((img, i) => (
                                                     <Image
                                                         key={i}
-                                                        src={`${baseUrl}${img}`}
+                                                        src={`${img}`}
                                                         alt={`gallery-${i}`}
                                                         width={80}
                                                         height={60}
