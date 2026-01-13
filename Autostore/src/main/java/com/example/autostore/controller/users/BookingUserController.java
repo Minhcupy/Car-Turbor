@@ -1,16 +1,15 @@
 package com.example.autostore.controller.users;
 
 
-import com.example.autostore.dto.user.BookingPreviewDTO;
-import com.example.autostore.dto.user.BookingRequestDTO;
-import com.example.autostore.dto.user.BookingResponseDTO;
-import com.example.autostore.dto.user.CarItemDTO;
+import com.example.autostore.dto.user.*;
 import com.example.autostore.service.user.implement.BookingUserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -45,5 +44,12 @@ public class BookingUserController {
         return ResponseEntity.ok(bookingService.getBookingById(bookingId));
     }
 
-
+    @GetMapping("/availability")
+    public AvailabilityDTO availability(
+            @RequestParam Integer carId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDT,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDT
+    ) {
+        return bookingService.checkAvailability(carId, startDT, endDT);
+    }
 }

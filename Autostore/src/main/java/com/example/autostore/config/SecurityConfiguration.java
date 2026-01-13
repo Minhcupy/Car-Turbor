@@ -78,8 +78,10 @@ public class SecurityConfiguration {
                                 "/v3/api-docs/**",
                                 "/api/brands/**",
                                 "/api/user/cars/**",
-                                "/api/user/cars/featured"
+                                "/api/user/cars/featured",
+                                "api/user/bookings/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/user/bookings/**").permitAll()
                         .requestMatchers("/ws/**", "/ws-chat/**", "/api/chat/**").permitAll()
                         .requestMatchers("/api/chatbot").permitAll()
                         .requestMatchers(HttpMethod.PUT, "/api/user/me/avatar").authenticated()
@@ -88,7 +90,6 @@ public class SecurityConfiguration {
                         .requestMatchers("/api/messages/**").authenticated()
                         .requestMatchers("/api/chat/**").authenticated()
 
-                        .requestMatchers("/api/user/bookings/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers("/api/user/payments/**").hasAnyRole("USER", "ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/reviews/**").hasAnyRole("USER", "ADMIN")
 

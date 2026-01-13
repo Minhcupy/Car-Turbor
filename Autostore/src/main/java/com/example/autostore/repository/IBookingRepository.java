@@ -87,6 +87,36 @@ public interface IBookingRepository extends JpaRepository<Booking, Integer> {
     // Step 4: Lấy danh sách booking theo khách hàng
     List<Booking> findByCustomer_CustomerId(Integer customerId);
 
+    @Query("""
+    SELECT COUNT(b)
+    FROM Booking b
+    WHERE b.car.carId = :carId
+      AND b.status IN :activeStatuses
+      AND FUNCTION('timestamp', b.pickupDate, b.pickupTime) < :endDT
+      AND FUNCTION('timestamp', b.returnDate, b.returnTime) > :startDT
+""")
+    long countBusyUnits(
+            @Param("carId") Integer carId,
+            @Param("startDT") LocalDateTime startDT,
+            @Param("endDT") LocalDateTime endDT,
+            @Param("activeStatuses") List<BookingStatus> activeStatuses
+    );
+
+    @Query("""
+    SELECT b FROM Booking b
+    WHERE b.car.carId = :carId
+      AND b.status IN :activeStatuses
+      AND FUNCTION('timestamp', b.pickupDate, b.pickupTime) < :endDT
+      AND FUNCTION('timestamp', b.returnDate, b.returnTime) > :startDT
+    ORDER BY b.pickupDate, b.pickupTime
+""")
+    List<Booking> findOverlappingBookings(
+            @Param("carId") Integer carId,
+            @Param("startDT") LocalDateTime startDT,
+            @Param("endDT") LocalDateTime endDT,
+            @Param("activeStatuses") List<BookingStatus> activeStatuses
+    );
+
     List<Booking> findByCustomer_CustomerIdAndStatus(Integer customerId, BookingStatus status);
 
     List<Booking> findByCustomer(Customer customer);
