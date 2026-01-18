@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React, {useMemo} from "react"
 
 import { useEffect, useState } from "react"
 import { DataTable } from "@/components/ui-admin/data-table"
@@ -20,6 +20,14 @@ export default function BlogPage() {
   const [loading, setLoading] = useState(true)
   const [showPostModal, setShowPostModal] = useState(false)
   const [editingPost, setEditingPost] = useState<any>(null)
+  const [page, setPage] = useState(0)
+  const pageSize = 10
+  const totalPages = Math.max(1, Math.ceil(posts.length / pageSize))
+
+  const pagePosts = useMemo(() => {
+    const start = page * pageSize
+    return posts.slice(start, start + pageSize)
+  }, [posts, page])
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,6 +80,15 @@ export default function BlogPage() {
     return <div className="flex items-center justify-center h-64">Loading...</div>
   }
 
+  const pgBtn =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-gray-300 text-gray-700 hover:bg-gray-100 " +
+      "disabled:opacity-40 disabled:cursor-not-allowed"
+
+  const pgBtnActive =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-blue-500 bg-blue-500 text-white"
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -85,7 +102,73 @@ export default function BlogPage() {
         </Button>
       </div>
 
-      <DataTable data={posts} columns={columns} onRowAction={handleRowAction} />
+      <DataTable data={pagePosts} columns={columns} onRowAction={handleRowAction} />
+
+      {/* Pagination (FE) */}
+      {totalPages > 0 && (
+          <div className="flex justify-center mt-4">
+            <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground mr-2">
+              Trang <b>{page + 1}</b>/<b>{totalPages}</b>
+            </span>
+
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page === 0}
+                  onClick={() => setPage(0)}
+              >
+                «
+              </Button>
+
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                ‹
+              </Button>
+
+              {Array.from({ length: totalPages }).map((_, i) => (
+                  <Button
+                      key={i}
+                      className={i === page ? pgBtnActive : pgBtn}
+                      variant="ghost"
+                      onClick={() => setPage(i)}
+                  >
+                    {i + 1}
+                  </Button>
+              ))}
+
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              >
+                ›
+              </Button>
+
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage(totalPages - 1)}
+              >
+                »
+              </Button>
+
+              <span className="text-sm text-muted-foreground ml-2">
+               Tổng: <b>{posts.length}</b> bài viết
+              </span>
+            </div>
+          </div>
+      )}
 
       {/* Post Modal */}
       <ModalForm

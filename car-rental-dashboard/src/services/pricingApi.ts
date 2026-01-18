@@ -1,36 +1,33 @@
 // src/services/pricingApi.ts
-import axios from "axios"
+import api from "./user/api"
 
 export type Pricing = {
     pricingId: number
-    unit: string          // "DAY" | "HOUR" | ...
+    unit: string
     price: number
     carId: number
 }
 
-const API_URL = "http://localhost:8080/api/admin/pricing"
-
 export const pricingApi = {
-    // Lấy tất cả pricing của 1 car
     getByCar: async (carId: number): Promise<Pricing[]> => {
-        const res = await axios.get<Pricing[]>(`${API_URL}/car/${carId}`)
+        const res = await api.get<Pricing[]>(`/admin/pricing/car/${carId}`)
         return res.data
     },
 
-    // Tạo pricing mới
     create: async (data: Omit<Pricing, "pricingId">): Promise<Pricing> => {
-        const res = await axios.post<Pricing>(API_URL, data)
+        const res = await api.post<Pricing>(`/admin/pricing`, data)
         return res.data
     },
 
-    // Cập nhật pricing
-    update: async (id: number, data: Omit<Pricing, "pricingId">): Promise<Pricing> => {
-        const res = await axios.put<Pricing>(`${API_URL}/${id}`, data)
+    update: async (
+        id: number,
+        data: Omit<Pricing, "pricingId">
+    ): Promise<Pricing> => {
+        const res = await api.put<Pricing>(`/admin/pricing/${id}`, data)
         return res.data
     },
 
-    // Xoá pricing
     delete: async (id: number): Promise<void> => {
-        await axios.delete(`${API_URL}/${id}`)
+        await api.delete(`/admin/pricing/${id}`)
     },
 }

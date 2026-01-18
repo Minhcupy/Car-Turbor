@@ -108,6 +108,15 @@ export default function CarTypesPage() {
 
     if (loading) return <div className="flex items-center justify-center h-64">Đang tải...</div>
 
+    const pgBtn =
+        "h-8 min-w-[32px] px-2 border rounded text-sm " +
+        "border-gray-300 text-gray-700 hover:bg-gray-100 " +
+        "disabled:opacity-40 disabled:cursor-not-allowed"
+
+    const pgBtnActive =
+        "h-8 min-w-[32px] px-2 border rounded text-sm " +
+        "border-blue-500 bg-blue-500 text-white"
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -163,17 +172,72 @@ export default function CarTypesPage() {
             </div>
 
             {/* Pagination */}
-            <div className="flex justify-between items-center mt-4">
-                <span>Trang {page}/{totalPages}</span>
-                <div className="space-x-2">
-                    <Button variant="outline" disabled={page === 1} onClick={() => setPage(page - 1)}>
-                        Trước
-                    </Button>
-                    <Button variant="outline" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
-                        Sau
-                    </Button>
+            {totalPages > 0 && (
+                <div className="flex justify-center mt-4">
+                    <div className="flex items-center gap-2">
+                        {/* Trang x/y */}
+                        <span className="text-sm text-muted-foreground mr-2">
+                            Trang <b>{page}</b>/<b>{totalPages}</b>
+                        </span>
+
+                        {/* Về đầu */}
+                        <Button
+                            className={pgBtn}
+                            variant="ghost"
+                            size="icon"
+                            disabled={page <= 1}
+                            onClick={() => setPage(1)}
+                        >
+                            «
+                        </Button>
+
+                        {/* Lùi 1 */}
+                        <Button
+                            className={pgBtn}
+                            variant="ghost"
+                            size="icon"
+                            disabled={page <= 1}
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        >
+                            ‹
+                        </Button>
+
+                        {/* Các nút số trang */}
+                        {Array.from({ length: totalPages }).map((_, i) => (
+                            <Button
+                                key={i}
+                                className={i + 1 === page ? pgBtnActive : pgBtn}
+                                variant="ghost"
+                                onClick={() => setPage(i + 1)}
+                            >
+                                {i + 1}
+                            </Button>
+                        ))}
+
+                        {/* Tiến 1 */}
+                        <Button
+                            className={pgBtn}
+                            variant="ghost"
+                            size="icon"
+                            disabled={page >= totalPages}
+                            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        >
+                            ›
+                        </Button>
+
+                        {/* Về cuối */}
+                        <Button
+                            className={pgBtn}
+                            variant="ghost"
+                            size="icon"
+                            disabled={page >= totalPages}
+                            onClick={() => setPage(totalPages)}
+                        >
+                            »
+                        </Button>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Modal thêm/sửa */}
             <ModalForm

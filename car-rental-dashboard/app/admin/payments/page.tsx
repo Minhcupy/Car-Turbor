@@ -131,6 +131,14 @@ export default function PaymentsPage() {
   if (loading) {
     return <div className="flex items-center justify-center h-64">Đang tải...</div>
   }
+  const pgBtn =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-gray-300 text-gray-700 hover:bg-gray-100 " +
+      "disabled:opacity-40 disabled:cursor-not-allowed"
+
+  const pgBtnActive =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-blue-500 bg-blue-500 text-white"
 
   return (
     <div className="space-y-6">
@@ -156,7 +164,10 @@ export default function PaymentsPage() {
 
           <Select
             value={status}
-            onValueChange={(v) => setStatus(v === "ALL" ? undefined : (v as PaymentStatus))}
+            onValueChange={(v) => {
+              setPage(0)
+              setStatus(v === "ALL" ? undefined : (v as PaymentStatus))
+            }}
           >
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Lọc trạng thái" />
@@ -174,33 +185,77 @@ export default function PaymentsPage() {
 
       <DataTable data={pageData?.content || []} columns={columns} searchable={false} />
 
-      {/* Phân trang */}
-      {pageData && pageData.totalPages > 1 && (
-        <div className="flex items-center justify-between">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setPage((p) => Math.max(0, p - 1))}
-            disabled={page === 0}
-          >
-            <ChevronLeft className="w-4 h-4 mr-2" /> Trang trước
-          </Button>
+      {/* Pagination (giống Booking) */}
+      {pageData && pageData.totalPages > 0 && (
+          <div className="flex justify-center mt-4">
+            <div className="flex items-center gap-2">
+              {/* Trang x / y */}
+              <span className="text-sm text-muted-foreground mr-2">
+                Trang <b>{page + 1}</b>/<b>{pageData.totalPages}</b>
+              </span>
 
-          <span className="text-sm">
-            Trang {page + 1} / {pageData.totalPages}
-          </span>
+              {/* Về đầu */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page === 0}
+                  onClick={() => setPage(0)}
+              >
+                «
+              </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              setPage((p) => Math.min(pageData.totalPages - 1, p + 1))
-            }
-            disabled={page === pageData.totalPages - 1}
-          >
-            Trang sau <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
+              {/* Lùi 1 */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                ‹
+              </Button>
+
+              {/* Các nút số trang */}
+              {Array.from({ length: pageData.totalPages }).map((_, i) => (
+                  <Button
+                      key={i}
+                      className={i === page ? pgBtnActive : pgBtn}
+                      variant="ghost"
+                      onClick={() => setPage(i)}
+                  >
+                    {i + 1}
+                  </Button>
+              ))}
+
+              {/* Tiến 1 */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page >= pageData.totalPages - 1}
+                  onClick={() => setPage((p) => Math.min(pageData.totalPages - 1, p + 1))}
+              >
+                ›
+              </Button>
+
+              {/* Về cuối */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page >= pageData.totalPages - 1}
+                  onClick={() => setPage(pageData.totalPages - 1)}
+              >
+                »
+              </Button>
+
+              {/* Tổng */}
+              <span className="text-sm text-muted-foreground ml-2">
+                Tổng: <b>{pageData.totalElements ?? 0}</b> giao dịch
+              </span>
+            </div>
+          </div>
       )}
     </div>
   )

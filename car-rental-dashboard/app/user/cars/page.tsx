@@ -18,6 +18,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import CarCard from "./CarCard"
 import type { CarUserDTO } from "@/src/services/user/carApi"
 import { getAllCars, searchCars } from "@/src/services/user/carApi"
+import { carTypeApi, type CarTypeDTO } from "@/src/services/carTypeApi"
 
 export default function CarsPage() {
   const searchParams = useSearchParams()
@@ -29,6 +30,8 @@ export default function CarsPage() {
   // ====== ref để scroll xuống danh sách xe ======
   const resultsRef = useRef<HTMLDivElement | null>(null)
   const didAutoScrollRef = useRef(false)
+  const [carTypes, setCarTypes] = useState<CarTypeDTO[]>([])
+  const [loadingTypes, setLoadingTypes] = useState(false)
 
   // ====== Filters (lọc client) ======
   const [searchTerm, setSearchTerm] = useState("")
@@ -71,6 +74,25 @@ export default function CarsPage() {
       returnTime,
     }
   }, [searchParams])
+
+  useEffect(() => {
+    const fetchCarTypes = async () => {
+      try {
+        setLoadingTypes(true)
+        const data = await carTypeApi.getAll()
+        // (tuỳ chọn) sort theo tên
+        data.sort((a, b) => a.typeName.localeCompare(b.typeName, "vi"))
+        setCarTypes(data)
+      } catch (e) {
+        console.error("❌ Lỗi lấy loại xe:", e)
+        setCarTypes([])
+      } finally {
+        setLoadingTypes(false)
+      }
+    }
+
+    fetchCarTypes()
+  }, [])
 
   // ===== 2) Gọi API dựa theo query =====
   useEffect(() => {
@@ -333,11 +355,17 @@ export default function CarsPage() {
                   <SelectTrigger className="w-48 h-12 border-gray-200">
                     <SelectValue placeholder="Loại xe" />
                   </SelectTrigger>
+
                   <SelectContent>
-                    <SelectItem value="all">Tất cả loại xe</SelectItem>
-                    <SelectItem value="Sedan">Sedan</SelectItem>
-                    <SelectItem value="SUV">SUV</SelectItem>
-                    <SelectItem value="Hatchback">Hatchback</SelectItem>
+                    <SelectItem value="all">
+                      {loadingTypes ? "Đang tải..." : "Tất cả loại xe"}
+                    </SelectItem>
+
+                    {carTypes.map((t) => (
+                        <SelectItem key={t.carTypeId} value={t.typeName}>
+                          {t.typeName}
+                        </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
 

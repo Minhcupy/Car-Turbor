@@ -28,11 +28,24 @@ export default function CustomersPage() {
     loadCustomers();
   }, [page, keyword]);
 
+  useEffect(() => {
+    setPage(0)
+  }, [keyword])
+
   const handleDelete = async (id: number) => {
     if (!confirm("Bạn có chắc muốn xóa khách hàng này?")) return;
     await deleteCustomer(id);
     loadCustomers();
   };
+
+  const pgBtn =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-gray-300 text-gray-700 hover:bg-gray-100 " +
+      "disabled:opacity-40 disabled:cursor-not-allowed"
+
+  const pgBtnActive =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-blue-500 bg-blue-500 text-white"
 
   return (
     <div className="p-6 space-y-6">
@@ -105,19 +118,78 @@ export default function CustomersPage() {
         </Table>
       </div>
 
-      {/* Pagination */}
-      <div className="flex items-center justify-between mt-4">
-        <p className="text-sm text-muted-foreground">
-          Tổng số khách hàng: {totalElements}
-        </p>
-        <div className="flex gap-2">
-          <Button variant="outline" disabled={page === 0} onClick={() => setPage(page - 1)}>Trước</Button>
-          <span className="px-2 py-1 border rounded text-sm">
-            Trang {page + 1} / {totalPages}
-          </span>
-          <Button variant="outline" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)}>Sau</Button>
-        </div>
-      </div>
+      {/* Pagination (giống Booking) */}
+      {totalPages > 0 && (
+          <div className="flex justify-center mt-4">
+            <div className="flex items-center gap-2">
+              {/* Trang x/y */}
+              <span className="text-sm text-muted-foreground mr-2">
+                Trang <b>{page + 1}</b>/<b>{totalPages}</b>
+              </span>
+
+              {/* Về đầu */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page === 0}
+                  onClick={() => setPage(0)}
+              >
+                «
+              </Button>
+
+              {/* Lùi 1 */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                ‹
+              </Button>
+
+              {/* Các nút số trang */}
+              {Array.from({ length: totalPages }).map((_, i) => (
+                  <Button
+                      key={i}
+                      className={i === page ? pgBtnActive : pgBtn}
+                      variant="ghost"
+                      onClick={() => setPage(i)}
+                  >
+                    {i + 1}
+                  </Button>
+              ))}
+
+              {/* Tiến 1 */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+              >
+                ›
+              </Button>
+
+              {/* Về cuối */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage(totalPages - 1)}
+              >
+                »
+              </Button>
+
+              {/* Tổng */}
+              <span className="text-sm text-muted-foreground ml-2">
+                Tổng: <b>{totalElements}</b> khách hàng
+              </span>
+            </div>
+          </div>
+      )}
     </div>
   );
 }
