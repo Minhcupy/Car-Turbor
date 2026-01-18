@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import SockJS from "sockjs-client"
 import { Client } from "@stomp/stompjs"
-import { MessageCircle, Send, Wifi, WifiOff, Search } from "lucide-react"
+import {MessageCircle, Send, Wifi, WifiOff, Search, Trash2} from "lucide-react"
 
 import { Button } from "@/components/ui-admin/button"
 import { Textarea } from "@/components/ui-admin/textarea"
@@ -12,7 +12,13 @@ import { Input } from "@/components/ui-admin/input"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui-admin/avatar"
 
 import { getAccessToken } from "@/src/services/user/token"
-import { adminSendMessage, getAdminInbox, getChatHistory, type ChatMessage } from "@/src/services/adminChatApi"
+import {
+  adminSendMessage,
+  getAdminInbox,
+  getChatHistory,
+  type ChatMessage,
+  deleteConversation
+} from "@/src/services/adminChatApi"
 
 // ✅ API mới: GET /users/{id} (admin quyền)
 import { getUserById, type UserBrief } from "@/src/services/user/user"
@@ -54,6 +60,7 @@ export default function ContactsPage() {
   const [loadingInbox, setLoadingInbox] = useState(true)
   const [loadingChat, setLoadingChat] = useState(false)
   const [err, setErr] = useState("")
+  const [deleting, setDeleting] = useState(false)
 
   const [q, setQ] = useState("")
   const [inbox, setInbox] = useState<InboxItem[]>([])
@@ -89,6 +96,28 @@ export default function ContactsPage() {
       if (!el) return
       el.scrollTo({ top: el.scrollHeight, behavior: "smooth" })
     })
+  }
+
+  const onDeleteConversation = async () => {
+    if (!activeConversationId) return
+    const ok = confirm("Xóa cuộc hội thoại này? Toàn bộ tin nhắn sẽ bị xóa và không thể khôi phục.")
+    if (!ok) return
+
+    try {
+      setDeleting(true)
+      await deleteConversation(activeConversationId)
+
+      // ✅ Remove khỏi inbox
+      setInbox((prev) => prev.filter((x) => x.conversationId !== activeConversationId))
+
+      // ✅ Clear khung chat
+      setMessages([])
+      setActiveConversationId(null)
+    } catch (e: any) {
+      setErr(e?.message || "Xóa cuộc hội thoại thất bại")
+    } finally {
+      setDeleting(false)
+    }
   }
 
   // ===== Helpers =====
@@ -427,7 +456,19 @@ export default function ContactsPage() {
                   )}
                 </div>
 
-                <div className="text-xs text-muted-foreground">{activeConversationId ?? ""}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-xs text-muted-foreground">{activeConversationId ?? ""}</div>
+
+                  <Button
+                      size="icon"
+                      variant="destructive"
+                      title="Xóa cuộc hội thoại"
+                      disabled={!activeConversationId || deleting}
+                      onClick={onDeleteConversation}
+                  >
+                    <Trash2 className="h-4 w-4"/>
+                  </Button>
+                </div>
               </div>
             </div>
 

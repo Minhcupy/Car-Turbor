@@ -32,6 +32,8 @@ export interface CarItem {
 
 export interface BookingRequestDTO {
     carId: number
+    pricingId: number
+    rentalUnits: number
     pickupLocation: string
     returnLocation: string
     pickupDate: string
@@ -45,9 +47,6 @@ export interface BookingRequestDTO {
     address: string
     idNumber: string
     licenseNumber: string
-
-
-
 }
 
 export interface BookingResponseDTO {

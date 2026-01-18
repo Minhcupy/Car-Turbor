@@ -26,7 +26,8 @@ export default function PageBooking() {
   const [loading, setLoading] = useState(true)
   const [keyword, setKeyword] = useState("")
   const [page, setPage] = useState(0)
-  const [pageSize] = useState(5)
+  const [pageSize] = useState(10)
+  const [pageInput, setPageInput] = useState("1")
 
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null)
   const [showDetailModal, setShowDetailModal] = useState(false)
@@ -51,6 +52,14 @@ export default function PageBooking() {
   useEffect(() => {
     fetchBookings()
   }, [page, keyword])
+
+  useEffect(() => {
+    setPageInput(String(page + 1))
+  }, [page])
+
+  useEffect(() => {
+    setPage(0)
+  }, [keyword])
 
   const confirmDelete = async () => {
     if (!deleteId) return
@@ -91,6 +100,15 @@ export default function PageBooking() {
   }
 
   if (loading) return <div className="flex items-center justify-center h-64">Đang tải...</div>
+
+  const pgBtn =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-gray-300 text-gray-700 hover:bg-gray-100 " +
+      "disabled:opacity-40 disabled:cursor-not-allowed"
+
+  const pgBtnActive =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-blue-500 bg-blue-500 text-white"
 
   return (
     <div className="space-y-6">
@@ -161,6 +179,79 @@ export default function PageBooking() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {pageData && pageData.totalPages > 0 && (
+          <div className="flex justify-center mt-4">
+            <div className="flex items-center gap-2">
+              {/* Trang x / y */}
+              <span className="text-sm text-muted-foreground mr-2">
+        Trang <b>{page + 1}</b>/<b>{pageData.totalPages}</b>
+      </span>
+
+              {/* Về đầu */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={pageData.first || loading}
+                  onClick={() => setPage(0)}
+              >
+                «
+              </Button>
+
+              {/* Lùi 1 */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={pageData.first || loading}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+              >
+                ‹
+              </Button>
+
+              {/* Các nút số trang */}
+              {Array.from({ length: pageData.totalPages }).map((_, i) => (
+                  <Button
+                      key={i}
+                      className={i === page ? pgBtnActive : pgBtn}
+                      variant="ghost"
+                      onClick={() => setPage(i)}
+                  >
+                    {i + 1}
+                  </Button>
+              ))}
+
+              {/* Tiến 1 */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={pageData.last || loading}
+                  onClick={() => setPage((p) => p + 1)}
+              >
+                ›
+              </Button>
+
+              {/* Về cuối */}
+              <Button
+                  className={pgBtn}
+                  variant="ghost"
+                  size="icon"
+                  disabled={pageData.last || loading}
+                  onClick={() => setPage(pageData.totalPages - 1)}
+              >
+                »
+              </Button>
+
+              {/* Tổng */}
+              <span className="text-sm text-muted-foreground ml-2">
+        Tổng: <b>{pageData.totalElements}</b> đơn
+      </span>
+            </div>
+          </div>
+      )}
 
       {/* Modal Chi tiết + QR */}
       <ModalForm open={showDetailModal} onOpenChange={setShowDetailModal} title="Chi tiết đơn đặt xe">

@@ -21,6 +21,7 @@ import {
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import {Pricing, userPricingApi} from "@/src/services/user/pricingApi";
 
 function getImageUrl(path?: string) {
   if (!path) return "/placeholder.svg"
@@ -34,23 +35,47 @@ export default function CarDetailPage() {
   const [relatedCars, setRelatedCars] = useState<CarUserDTO[]>([])
   const [loading, setLoading] = useState(true)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+  const [pricings, setPricings] = useState<Pricing[]>([])
+  const [selectedPricingId, setSelectedPricingId] = useState<number | null>(null)
 
   useEffect(() => {
-    if (id) {
-      getCarById(Number(id))
-        .then((car) => {
+    if (!id) return
+
+    getCarById(Number(id))
+        .then(async (car) => {
           setCarDetails(car)
+
+          // related cars
           getAllCars().then((cars) => {
             const related = cars.filter(
-              (c) => c.typeName === car.typeName && c.carId !== car.carId
+                (c) => c.typeName === car.typeName && c.carId !== car.carId
             )
             setRelatedCars(related)
           })
+
+          // ✅ load pricing theo carId
+          const list = await userPricingApi.getByCar(car.carId)
+          setPricings(list)
+
+          // mặc định chọn item đầu tiên (ưu tiên DAY nếu có)
+          const day = list.find((p) => p.unit === "DAY")
+          setSelectedPricingId((day ?? list[0])?.pricingId ?? null)
         })
         .catch((err) => console.error("Lỗi load car detail:", err))
         .finally(() => setLoading(false))
-    }
   }, [id])
+
+  function unitLabel(unit?: string) {
+    switch (unit) {
+      case "HOUR": return "Giờ"
+      case "DAY": return "Ngày"
+      case "WEEK": return "Tuần"
+      case "MONTH": return "Tháng"
+      default: return unit ?? ""
+    }
+  }
+
+  const selectedPricing = pricings.find((p) => p.pricingId === selectedPricingId) || null
 
   if (loading) return <p className="text-center py-10">Đang tải dữ liệu...</p>
   if (!carDetails) return <p className="text-center py-10 text-red-500">Không tìm thấy xe</p>
@@ -100,23 +125,49 @@ export default function CarDetailPage() {
               <div className="flex items-start justify-between">
                 <h1 className="text-2xl font-bold text-gray-800">{carDetails.carName}</h1>
                 {carDetails.status === "AVAILABLE" && (
-                  <span className="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-lg">
+                    <span className="bg-green-100 text-green-700 text-xs font-semibold px-3 py-1 rounded-lg">
                     Có sẵn
                   </span>
                 )}
                 {carDetails.status === "MAINTENANCE" && (
-                  <span className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-lg">
+                    <span className="bg-yellow-100 text-yellow-700 text-xs font-semibold px-3 py-1 rounded-lg">
                     Bảo trì
                   </span>
                 )}
               </div>
 
               {/* Giá thuê */}
-              <div>
-                <span className="text-3xl font-extrabold text-sky-600">
-                  {carDetails.price?.toLocaleString("vi-VN")} VND
-                </span>
-                <span className="text-gray-500 text-sm ml-1">/ngày</span>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-extrabold text-sky-600">
+                    {(selectedPricing?.price ?? carDetails.price ?? 0).toLocaleString("vi-VN")} VND
+                  </span>
+                  <span className="text-gray-500 text-sm">
+                    /{unitLabel(selectedPricing?.unit) || "ngày"}
+                  </span>
+                </div>
+
+                {/* ✅ Select đơn vị thuê */}
+                <div className="flex items-center gap-3">
+                  <label className="text-sm text-gray-600 min-w-[90px]">Kiểu thuê</label>
+
+                  <select
+                      className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-sm outline-none focus:ring-2 focus:ring-sky-200"
+                      value={selectedPricingId ?? ""}
+                      onChange={(e) => setSelectedPricingId(Number(e.target.value))}
+                      disabled={pricings.length === 0}
+                  >
+                    {pricings.length === 0 ? (
+                        <option value="">Chưa có giá</option>
+                    ) : (
+                        pricings.map((p) => (
+                            <option key={p.pricingId} value={p.pricingId}>
+                              {unitLabel(p.unit)} - {p.price.toLocaleString("vi-VN")} VND
+                            </option>
+                        ))
+                    )}
+                  </select>
+                </div>
               </div>
 
               {/* Ưu đãi */}
@@ -126,32 +177,42 @@ export default function CarDetailPage() {
 
               {/* Thông số kỹ thuật */}
               <div className="grid grid-cols-2 gap-3 text-gray-700 border rounded-xl p-4 text-sm bg-gray-50">
-                <div className="flex items-center space-x-2"><Users className="h-4 w-4 text-sky-600" /><span>{carDetails.seats} chỗ</span></div>
-                <div className="flex items-center space-x-2"><Settings className="h-4 w-4 text-sky-600" /><span>{carDetails.transmission}</span></div>
-                <div className="flex items-center space-x-2"><Gauge className="h-4 w-4 text-sky-600" /><span>{carDetails.engine || "43 HP"}</span></div>
-                <div className="flex items-center space-x-2"><Fuel className="h-4 w-4 text-sky-600" /><span>{carDetails.fuelType}</span></div>
-                <div className="flex items-center space-x-2"><Calendar className="h-4 w-4 text-sky-600" /><span>Năm: {carDetails.year}</span></div>
-                <div className="flex items-center space-x-2"><Palette className="h-4 w-4 text-sky-600" /><span>Màu: {carDetails.color}</span></div>
-                <div className="flex items-center space-x-2"><Hash className="h-4 w-4 text-sky-600" /><span>Biển số: {carDetails.licensePlate}</span></div>
-                <div className="flex items-center space-x-2"><MapPin className="h-4 w-4 text-sky-600" /><span>{carDetails.location}</span></div>
+                <div className="flex items-center space-x-2"><Users
+                    className="h-4 w-4 text-sky-600"/><span>{carDetails.seats} chỗ</span></div>
+                <div className="flex items-center space-x-2"><Settings
+                    className="h-4 w-4 text-sky-600"/><span>{carDetails.transmission}</span></div>
+                <div className="flex items-center space-x-2"><Gauge
+                    className="h-4 w-4 text-sky-600"/><span>{carDetails.engine || "43 HP"}</span></div>
+                <div className="flex items-center space-x-2"><Fuel
+                    className="h-4 w-4 text-sky-600"/><span>{carDetails.fuelType}</span></div>
+                <div className="flex items-center space-x-2"><Calendar
+                    className="h-4 w-4 text-sky-600"/><span>Năm: {carDetails.year}</span></div>
+                <div className="flex items-center space-x-2"><Palette
+                    className="h-4 w-4 text-sky-600"/><span>Màu: {carDetails.color}</span></div>
+                <div className="flex items-center space-x-2"><Hash
+                    className="h-4 w-4 text-sky-600"/><span>Biển số: {carDetails.licensePlate}</span></div>
+                <div className="flex items-center space-x-2"><MapPin
+                    className="h-4 w-4 text-sky-600"/><span>{carDetails.location}</span></div>
               </div>
 
               {/* Nút đặt xe */}
-              <Link href={`/user/booking?carId=${carDetails.carId}`} className="flex-1">
+              <Link href={`/user/booking?carId=${carDetails.carId}&pricingId=${selectedPricingId ?? ""}`} className="flex-1">
                 <Button
-                  className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 
+                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600
                    hover:from-blue-700 hover:to-indigo-700 text-white font-semibold 
                    shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl"
-                  disabled={carDetails.status !== "AVAILABLE"}
+                    disabled={carDetails.status !== "AVAILABLE" || pricings.length === 0}
                 >
                   {carDetails.status === "AVAILABLE" ? "Đặt Ngay" : "Không khả dụng"}
                 </Button>
               </Link>
 
-              {/* Tư vấn */}
-              <p className="text-sky-600 text-sm cursor-pointer hover:underline text-center">
+              <Link
+                  href="/user/contact"
+                  className="text-sky-600 text-sm hover:underline text-center block"
+              >
                 Nhận tư vấn trực tiếp
-              </p>
+              </Link>
             </CardContent>
           </Card>
 
@@ -172,17 +233,17 @@ export default function CarDetailPage() {
                   "Bluetooth",
                   "Ghế da cao cấp",
                 ]).map((feature, idx) => (
-                  <div key={idx} className="flex items-center space-x-2 text-gray-700">
-                    <CheckCircle className="h-4 w-4 text-sky-600" />
-                    <span>{feature}</span>
-                  </div>
+                    <div key={idx} className="flex items-center space-x-2 text-gray-700">
+                      <CheckCircle className="h-4 w-4 text-sky-600"/>
+                      <span>{feature}</span>
+                    </div>
                 ))}
               </div>
             </div>
 
             {/* Policies */}
             <div className="bg-white p-6 rounded-lg shadow space-y-4 text-sm">
-              <h2 className="font-semibold text-gray-800 text-lg">Điều kiện thuê xe</h2>
+            <h2 className="font-semibold text-gray-800 text-lg">Điều kiện thuê xe</h2>
               <div className="space-y-2">
                 <div className="flex items-center space-x-2 text-gray-700">
                   <FileCheck className="h-4 w-4 text-sky-600" />

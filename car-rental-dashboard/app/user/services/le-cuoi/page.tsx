@@ -52,6 +52,8 @@ export default function LeCuoiPage() {
     const [err, setErr] = useState("")
     const [keyword, setKeyword] = useState("")
     const [onlyAvailable, setOnlyAvailable] = useState(true)
+    const [page, setPage] = useState(0)
+    const pageSize = 6
 
     useEffect(() => {
         let alive = true
@@ -94,6 +96,26 @@ export default function LeCuoiPage() {
             // gợi ý: ưu tiên featured/rating cao lên đầu
             .sort((a, b) => Number(b.featured) - Number(a.featured) || (b.rating ?? 0) - (a.rating ?? 0))
     }, [cars, keyword, onlyAvailable])
+
+    const totalPages = Math.max(1, Math.ceil(filteredCars.length / pageSize))
+
+    const pageCars = useMemo(() => {
+        const start = page * pageSize
+        return filteredCars.slice(start, start + pageSize)
+    }, [filteredCars, page])
+
+    useEffect(() => {
+        setPage(0)
+    }, [keyword, onlyAvailable])
+
+    const pgBtn =
+        "h-8 min-w-[32px] px-2 border rounded text-sm " +
+        "border-gray-300 text-gray-700 hover:bg-gray-100 " +
+        "disabled:opacity-40 disabled:cursor-not-allowed"
+
+    const pgBtnActive =
+        "h-8 min-w-[32px] px-2 border rounded text-sm " +
+        "border-blue-500 bg-blue-500 text-white"
 
     return (
         <div className="min-h-screen bg-white">
@@ -268,7 +290,7 @@ export default function LeCuoiPage() {
                                 </Card>
                             ) : (
                                 <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {filteredCars.map((car) => {
+                                    {pageCars.map((car) => {
                                         const badge = statusUI(car.status)
 
                                         return (
@@ -285,13 +307,13 @@ export default function LeCuoiPage() {
                                                     <span
                                                         className={`absolute top-3 left-3 text-xs px-2 py-1 rounded-full border ${badge.cls}`}
                                                     >
-                            {badge.label}
-                          </span>
+                                                        {badge.label}
+                                                    </span>
 
                                                     {car.featured ? (
                                                         <span className="absolute top-3 right-3 text-xs px-2 py-1 rounded-full border bg-white/90 text-sky-700 border-sky-100">
-                              Nổi bật
-                            </span>
+                                                          Nổi bật
+                                                        </span>
                                                     ) : null}
                                                 </div>
 
@@ -353,6 +375,65 @@ export default function LeCuoiPage() {
                                             </Card>
                                         )
                                     })}
+                                </div>
+                            )}
+                            {/* Pagination (tối đa 6 xe / trang) */}
+                            {filteredCars.length > 0 && totalPages > 1 && (
+                                <div className="flex justify-center mt-6">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-sm text-muted-foreground mr-2">
+                                            Trang <b>{page + 1}</b>/<b>{totalPages}</b>
+                                        </span>
+
+                                        <Button className={pgBtn} variant="ghost" size="icon" disabled={page === 0} onClick={() => setPage(0)}>
+                                            «
+                                        </Button>
+
+                                        <Button
+                                            className={pgBtn}
+                                            variant="ghost"
+                                            size="icon"
+                                            disabled={page === 0}
+                                            onClick={() => setPage((p) => Math.max(0, p - 1))}
+                                        >
+                                            ‹
+                                        </Button>
+
+                                        {Array.from({ length: totalPages }).map((_, i) => (
+                                            <Button
+                                                key={i}
+                                                className={i === page ? pgBtnActive : pgBtn}
+                                                variant="ghost"
+                                                onClick={() => setPage(i)}
+                                            >
+                                                {i + 1}
+                                            </Button>
+                                        ))}
+
+                                        <Button
+                                            className={pgBtn}
+                                            variant="ghost"
+                                            size="icon"
+                                            disabled={page >= totalPages - 1}
+                                            onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                                        >
+                                            ›
+                                        </Button>
+
+                                        <Button
+                                            className={pgBtn}
+                                            variant="ghost"
+                                            size="icon"
+                                            disabled={page >= totalPages - 1}
+                                            onClick={() => setPage(totalPages - 1)}
+                                        >
+                                            »
+                                        </Button>
+
+                                        <span className="text-sm text-muted-foreground ml-2">
+                                            Tổng: <b>{filteredCars.length}</b> xe
+                                        </span>
+                                    </div>
                                 </div>
                             )}
                         </div>

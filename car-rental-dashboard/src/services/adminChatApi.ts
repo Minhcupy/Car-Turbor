@@ -23,3 +23,12 @@ export function adminSendMessage(payload: { receiverId: number; content: string 
         body: JSON.stringify(payload),
     })
 }
+
+export function deleteConversation(conversationId: string) {
+    return authFetch<{ conversationId: string; deletedMessages: number }>(
+        `/admin/messages/conversations/${conversationId}`,
+        {
+            method: "DELETE",
+        }
+    )
+}

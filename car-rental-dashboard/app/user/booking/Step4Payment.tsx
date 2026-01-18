@@ -1,5 +1,6 @@
 "use client"
-import { useState } from "react"
+
+import { useMemo, useState } from "react"
 import Image from "next/image"
 import { ArrowLeft, Download, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,6 +16,7 @@ import {
     CarItem,
 } from "@/src/services/user/apiBookingUserService "
 import { paymentApi, PaymentResponseDTO } from "@/src/services/user/paymentApi"
+import type { Pricing } from "@/src/services/user/pricingApi"
 
 // Map enum -> nhãn hiển thị
 const paymentMethods = [
@@ -30,49 +32,127 @@ interface Step4PaymentProps {
     formData: any
     preview: BookingPreviewDTO | null
     prevStep: () => void
+    selectedPricingId: number | null
+    selectedPricing: Pricing | null
+}
+
+function unitLabel(unit?: string) {
+    switch (unit) {
+        case "HOUR":
+            return "giờ"
+        case "DAY":
+            return "ngày"
+        case "WEEK":
+            return "tuần"
+        case "MONTH":
+            return "tháng"
+        default:
+            return "ngày"
+    }
+}
+
+function money(n: number) {
+    return (n ?? 0).toLocaleString("vi-VN")
 }
 
 export default function Step4Payment({
-    selectedCar,
-    formData,
-    preview,
-    prevStep,
-}: Step4PaymentProps) {
+                                         selectedCar,
+                                         formData,
+                                         preview,
+                                         prevStep,
+                                         selectedPricingId,
+                                         selectedPricing,
+                                     }: Step4PaymentProps) {
     const [loading, setLoading] = useState(false)
     const [booking, setBooking] = useState<BookingResponseDTO | null>(null)
     const [payment, setPayment] = useState<PaymentResponseDTO | null>(null)
-    const [paymentMethod, setPaymentMethod] = useState<string>("SIMULATED") // mặc định giả lập
+    const [paymentMethod, setPaymentMethod] = useState<string>("SIMULATED")
     const [agree, setAgree] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
+    // ✅ rentalUnits chuẩn: lấy từ formData (Step2 đã set)
+    const rentalUnits = useMemo(() => {
+        const n = Number(formData?.rentalUnits)
+        if (!Number.isFinite(n) || n <= 0) return 1
+        return Math.floor(n)
+    }, [formData?.rentalUnits])
+
+    // ✅ tính tiền theo pricing (không tự tính lại từ thời gian)
+    const calc = useMemo(() => {
+        if (!selectedPricingId || !selectedPricing) return null
+        const pricePerUnit = Number(selectedPricing.price ?? 0)
+        const total = rentalUnits * pricePerUnit
+        const deposit = Math.round(total * 0.3)
+        const remain = total - deposit
+
+        return {
+            unitText: unitLabel(selectedPricing.unit),
+            units: rentalUnits,
+            pricePerUnit,
+            total,
+            deposit,
+            remain,
+        }
+    }, [selectedPricingId, selectedPricing, rentalUnits])
+
+    // ✅ hiển thị: ưu tiên calc, fallback preview (chỉ fallback tiền, KHÔNG fallback units)
+    const viewTotal = calc?.total ?? preview?.totalAmount ?? 0
+    const viewDeposit =
+        calc?.deposit ?? preview?.depositAmount ?? Math.round(viewTotal * 0.3)
+    const viewRemain = calc?.remain ?? viewTotal - viewDeposit
+
+    const viewUnits = rentalUnits
+    const viewUnitText = calc?.unitText ?? unitLabel(selectedPricing?.unit) ?? "ngày"
+
     const handlePayment = async () => {
-        if (!preview) return
+        if (!selectedPricingId) {
+            setErrorMsg("Chưa chọn kiểu thuê. Vui lòng quay lại bước 1 để chọn kiểu thuê.")
+            return
+        }
+
+        // preview có thể không bắt buộc nếu bạn đã tính calc đầy đủ,
+        // nhưng nếu flow bạn cần preview thì giữ check này:
+        if (!preview && !calc) {
+            setErrorMsg("Thiếu dữ liệu tạm tính. Vui lòng quay lại bước 2.")
+            return
+        }
+
+        if (!formData?.pickupDate || !formData?.pickupTime || !formData?.returnDate || !formData?.returnTime) {
+            setErrorMsg("Thiếu ngày/giờ nhận-trả. Vui lòng quay lại bước 2.")
+            return
+        }
+
         setLoading(true)
         setErrorMsg(null)
 
         try {
-            // 1. Tạo booking
+            // 1) Tạo booking (✅ gửi pricingId + rentalUnits chuẩn)
             const dto: BookingRequestDTO = {
                 carId: selectedCar.carId,
+
+                pricingId: selectedPricingId,
+                rentalUnits: rentalUnits,
+
                 pickupLocation: formData.pickupLocation || "",
                 returnLocation: formData.returnLocation || "",
                 pickupDate: formData.pickupDate,
                 returnDate: formData.returnDate,
                 pickupTime: formData.pickupTime || "08:00",
                 returnTime: formData.returnTime || "18:00",
+
                 notes: formData.notes || "",
-                fullName: formData.fullName,
+                fullName: formData.fullName || "",
                 email: formData.email || "",
-                phone: formData.phone,
+                phone: formData.phone || "",
                 address: formData.address || "",
                 idNumber: formData.idNumber || "",
                 licenseNumber: formData.licenseNumber || "",
-            }
+            } as any
 
             const bookingRes = await bookingApi.createBooking(dto)
             setBooking(bookingRes)
 
-            // 2. Tạo payment
+            // 2) Tạo payment
             const paymentCreated = await paymentApi.createPayment(
                 bookingRes.bookingId,
                 {
@@ -87,12 +167,11 @@ export default function Step4Payment({
                 throw new Error("Không nhận được paymentId từ server")
             }
 
-            // 3. Giả lập thanh toán
+            // 3) Giả lập thanh toán
             const payRes = await paymentApi.simulatePay(paymentCreated.paymentId)
             setPayment(payRes)
         } catch (err: any) {
             console.error("❌ Payment error:", err)
-            console.error("Response data:", err.response?.data)
             const message =
                 err.response?.data?.error ||
                 err.response?.data?.message ||
@@ -122,30 +201,36 @@ export default function Step4Payment({
                         <CardTitle className="text-gray-800">Thông Tin Thanh Toán</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        {preview && (
-                            <div className="grid md:grid-cols-3 gap-6 text-sm">
-                                <div>
-                                    <p className="text-gray-600">Tổng giá trị:</p>
-                                    <p className="font-bold text-lg">
-                                        {preview.totalAmount.toLocaleString("vi-VN")}đ
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-600">Tiền cọc (30%):</p>
-                                    <p className="font-bold text-lg text-sky-600">
-                                        {preview.depositAmount.toLocaleString("vi-VN")}đ
-                                    </p>
-                                </div>
-                                <div>
-                                    <p className="text-gray-600">Thanh toán khi nhận:</p>
-                                    <p className="font-medium">
-                                        {(
-                                            preview.totalAmount - preview.depositAmount
-                                        ).toLocaleString("vi-VN")}
-                                        đ
-                                    </p>
-                                </div>
+                        <div className="grid md:grid-cols-3 gap-6 text-sm">
+                            <div>
+                                <p className="text-gray-600">Tổng giá trị:</p>
+                                <p className="font-bold text-lg">{money(viewTotal)}đ</p>
                             </div>
+                            <div>
+                                <p className="text-gray-600">Tiền cọc (30%):</p>
+                                <p className="font-bold text-lg text-sky-600">{money(viewDeposit)}đ</p>
+                            </div>
+                            <div>
+                                <p className="text-gray-600">Thanh toán khi nhận:</p>
+                                <p className="font-medium">{money(viewRemain)}đ</p>
+                            </div>
+                        </div>
+
+                        {/* mô tả theo kiểu thuê */}
+                        <p className="mt-3 text-sm text-gray-600">
+                            Thời lượng thuê: <b>{viewUnits}</b> {viewUnitText}
+                            {selectedPricing ? (
+                                <>
+                                    {" "}
+                                    • Giá/{viewUnitText}: <b>{money(Number(selectedPricing.price ?? 0))}đ</b>
+                                </>
+                            ) : null}
+                        </p>
+
+                        {!selectedPricingId && (
+                            <p className="mt-2 text-sm text-red-600">
+                                Chưa có kiểu thuê. Vui lòng quay lại bước 1 để chọn kiểu thuê.
+                            </p>
                         )}
                     </CardContent>
                 </Card>
@@ -162,10 +247,11 @@ export default function Step4Payment({
                                 variant="ghost"
                                 onClick={() => setPaymentMethod(m.key)}
                                 className={`relative flex items-center justify-center p-0 h-24 border rounded-xl overflow-hidden transition-all
-                  ${paymentMethod === m.key
+                  ${
+                                    paymentMethod === m.key
                                         ? "border-sky-500 shadow-md scale-105"
                                         : "border-gray-200 hover:border-sky-300 hover:shadow-sm"
-                                    }`}
+                                }`}
                             >
                                 <span className="font-semibold">{m.label}</span>
                             </Button>
@@ -177,11 +263,11 @@ export default function Step4Payment({
                 <div className="flex items-center gap-2">
                     <Checkbox checked={agree} onCheckedChange={(v) => setAgree(!!v)} />
                     <span className="text-sm text-gray-700">
-                        Tôi đồng ý với{" "}
+            Tôi đồng ý với{" "}
                         <a href="#" className="text-sky-600 underline">
-                            điều khoản thuê xe
-                        </a>
-                    </span>
+              điều khoản thuê xe
+            </a>
+          </span>
                 </div>
 
                 {/* Loading */}
@@ -226,6 +312,7 @@ export default function Step4Payment({
                             <p>
                                 Trạng thái: <b>{payment.status}</b>
                             </p>
+
                             {payment.qrBase64 && (
                                 <div className="flex flex-col items-center mt-4">
                                     <p className="text-gray-700 mb-2">
@@ -256,8 +343,9 @@ export default function Step4Payment({
                         </Button>
                         <Button
                             onClick={handlePayment}
-                            disabled={!agree}
+                            disabled={!agree || !selectedPricingId}
                             className="bg-sky-500 hover:bg-sky-600 text-white"
+                            title={!selectedPricingId ? "Chưa chọn kiểu thuê" : undefined}
                         >
                             Thanh toán ({paymentMethod})
                         </Button>
@@ -265,7 +353,7 @@ export default function Step4Payment({
                 )}
             </div>
 
-            {/* RIGHT: Tóm tắt đơn */}
+            {/* RIGHT */}
             <div>
                 <Card className="border-sky-100 shadow-lg sticky top-24">
                     <CardHeader>
@@ -282,9 +370,13 @@ export default function Step4Payment({
                             />
                             <div>
                                 <h4 className="font-semibold">{selectedCar.carName}</h4>
-                                <p className="text-gray-600">{preview?.rentalDays} ngày</p>
+                                <p className="text-gray-600">
+                                    {viewUnits} {viewUnitText}
+                                </p>
+                                <p className="font-semibold text-sky-600">{money(viewTotal)}đ</p>
                             </div>
                         </div>
+
                         <div className="divide-y">
                             <div className="flex justify-between py-1">
                                 <span>Khách hàng:</span>
@@ -296,13 +388,34 @@ export default function Step4Payment({
                             </div>
                             <div className="flex justify-between py-1">
                                 <span>Ngày nhận:</span>
-                                <span>{formData.pickupDate}</span>
+                                <span>
+                  {formData.pickupDate} {formData.pickupTime}
+                </span>
                             </div>
                             <div className="flex justify-between py-1">
                                 <span>Ngày trả:</span>
-                                <span>{formData.returnDate}</span>
+                                <span>
+                  {formData.returnDate} {formData.returnTime}
+                </span>
                             </div>
                         </div>
+
+                        <div className="rounded-lg border border-sky-100 bg-sky-50 p-3">
+                            <div className="flex justify-between">
+                                <span>Tiền cọc (30%):</span>
+                                <b>{money(viewDeposit)}đ</b>
+                            </div>
+                            <div className="flex justify-between mt-1">
+                                <span>Còn lại khi nhận:</span>
+                                <b>{money(viewRemain)}đ</b>
+                            </div>
+                        </div>
+
+                        {!selectedPricingId && (
+                            <p className="text-sm text-red-600">
+                                Chưa có kiểu thuê. Vui lòng quay lại bước 1 để chọn kiểu thuê.
+                            </p>
+                        )}
                     </CardContent>
                 </Card>
             </div>

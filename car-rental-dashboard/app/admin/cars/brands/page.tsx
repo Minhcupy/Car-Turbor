@@ -113,6 +113,15 @@ export default function BrandsPage() {
 
     if (loading) return <div className="flex items-center justify-center h-64">Đang tải...</div>
 
+    const pgBtn =
+        "h-8 min-w-[32px] px-2 border rounded text-sm " +
+        "border-gray-300 text-gray-700 hover:bg-gray-100 " +
+        "disabled:opacity-40 disabled:cursor-not-allowed"
+
+    const pgBtnActive =
+        "h-8 min-w-[32px] px-2 border rounded text-sm " +
+        "border-blue-500 bg-blue-500 text-white"
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -194,38 +203,78 @@ export default function BrandsPage() {
                 </table>
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center justify-between mt-4">
-                <div className="text-sm text-muted-foreground">
-                    Hiển thị {(page - 1) * pageSize + 1} –{" "}
-                    {Math.min(page * pageSize, brandPage?.totalElements || 0)} /{" "}
-                    {brandPage?.totalElements || 0} thương hiệu
-                </div>
-                <div className="flex gap-2">
-                    <Button size="sm" variant="outline" disabled={page <= 1} onClick={() => setPage(page - 1)}>
-                        ← Trước
-                    </Button>
-                    {Array.from({ length: brandPage?.totalPages || 1 }, (_, i) => (
-                        <Button
-                            key={i}
-                            size="sm"
-                            variant={page === i + 1 ? "default" : "outline"}
-                            onClick={() => setPage(i + 1)}
-                        >
-                            {i + 1}
-                        </Button>
-                    ))}
-                    <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={page >= (brandPage?.totalPages || 1)}
-                        onClick={() => setPage(page + 1)}
-                    >
-                        Sau →
-                    </Button>
-                </div>
-            </div>
+            {/* Pagination (giống Booking) */}
+            {brandPage && brandPage.totalPages > 0 && (
+                <div className="flex justify-center mt-4">
+                    <div className="flex items-center gap-2">
+                        {/* Trang x/y */}
+                        <span className="text-sm text-muted-foreground mr-2">
+                            Trang <b>{page}</b>/<b>{brandPage.totalPages}</b>
+                        </span>
 
+                        {/* Về đầu */}
+                        <Button
+                            className={pgBtn}
+                            variant="ghost"
+                            size="icon"
+                            disabled={page <= 1}
+                            onClick={() => setPage(1)}
+                        >
+                            «
+                        </Button>
+
+                        {/* Lùi 1 */}
+                        <Button
+                            className={pgBtn}
+                            variant="ghost"
+                            size="icon"
+                            disabled={page <= 1}
+                            onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        >
+                            ‹
+                        </Button>
+
+                        {/* Các nút số trang */}
+                        {Array.from({ length: brandPage.totalPages }).map((_, i) => (
+                            <Button
+                                key={i}
+                                className={i + 1 === page ? pgBtnActive : pgBtn}
+                                variant="ghost"
+                                onClick={() => setPage(i + 1)}
+                            >
+                                {i + 1}
+                            </Button>
+                        ))}
+
+                        {/* Tiến 1 */}
+                        <Button
+                            className={pgBtn}
+                            variant="ghost"
+                            size="icon"
+                            disabled={page >= brandPage.totalPages}
+                            onClick={() => setPage((p) => Math.min(brandPage.totalPages, p + 1))}
+                        >
+                            ›
+                        </Button>
+
+                        {/* Về cuối */}
+                        <Button
+                            className={pgBtn}
+                            variant="ghost"
+                            size="icon"
+                            disabled={page >= brandPage.totalPages}
+                            onClick={() => setPage(brandPage.totalPages)}
+                        >
+                            »
+                        </Button>
+
+                        {/* Tổng */}
+                        <span className="text-sm text-muted-foreground ml-2">
+                            Tổng: <b>{brandPage.totalElements || 0}</b> thương hiệu
+                        </span>
+                    </div>
+                </div>
+            )}
             {/* Modal thêm/sửa */}
             <ModalForm
                 open={openModal}

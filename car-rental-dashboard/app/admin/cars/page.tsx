@@ -26,6 +26,10 @@ export default function CarsPage() {
     loadCars()
   }, [page, keyword])
 
+  useEffect(() => {
+    setPage(1)
+  }, [keyword])
+
   const handleOpenCreate = () => {
     setEditCar(null)
     setOpenForm(true)
@@ -35,6 +39,15 @@ export default function CarsPage() {
     setEditCar(car)
     setOpenForm(true)
   }
+
+  const pgBtn =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-gray-300 text-gray-700 hover:bg-gray-100 " +
+      "disabled:opacity-40 disabled:cursor-not-allowed"
+
+  const pgBtnActive =
+      "h-8 min-w-[32px] px-2 border rounded text-sm " +
+      "border-blue-500 bg-blue-500 text-white"
 
   return (
       <div className="space-y-6">
@@ -149,35 +162,78 @@ export default function CarsPage() {
           </table>
         </div>
 
-        {/* Phân trang */}
-        <div className="flex items-center justify-center gap-2 mt-4">
-          <Button
-              size="sm"
-              variant="outline"
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-          >
-            ← Trước
-          </Button>
-          {Array.from({length: carPage?.totalPages || 1}, (_, i) => (
-              <Button
-                  key={i}
-                  size="sm"
-                  variant={page === i + 1 ? "default" : "outline"}
-                  onClick={() => setPage(i + 1)}
-              >
-                {i + 1}
-              </Button>
-          ))}
-          <Button
-              size="sm"
-              variant="outline"
-              disabled={page === (carPage?.totalPages || 1)}
-              onClick={() => setPage(page + 1)}
-          >
-            Sau →
-          </Button>
-        </div>
+        {/* Pagination (giống Booking) */}
+        {carPage && carPage.totalPages > 0 && (
+            <div className="flex justify-center mt-4">
+              <div className="flex items-center gap-2">
+                {/* Trang x / y */}
+                <span className="text-sm text-muted-foreground mr-2">
+        Trang <b>{page}</b>/<b>{carPage.totalPages}</b>
+      </span>
+
+                {/* Về đầu */}
+                <Button
+                    className={pgBtn}
+                    variant="ghost"
+                    size="icon"
+                    disabled={page === 1}
+                    onClick={() => setPage(1)}
+                >
+                  «
+                </Button>
+
+                {/* Lùi 1 */}
+                <Button
+                    className={pgBtn}
+                    variant="ghost"
+                    size="icon"
+                    disabled={page === 1}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                >
+                  ‹
+                </Button>
+
+                {/* Các nút số trang */}
+                {Array.from({ length: carPage.totalPages }).map((_, i) => (
+                    <Button
+                        key={i}
+                        className={i + 1 === page ? pgBtnActive : pgBtn}
+                        variant="ghost"
+                        onClick={() => setPage(i + 1)}
+                    >
+                      {i + 1}
+                    </Button>
+                ))}
+
+                {/* Tiến 1 */}
+                <Button
+                    className={pgBtn}
+                    variant="ghost"
+                    size="icon"
+                    disabled={page === carPage.totalPages}
+                    onClick={() => setPage((p) => Math.min(carPage.totalPages, p + 1))}
+                >
+                  ›
+                </Button>
+
+                {/* Về cuối */}
+                <Button
+                    className={pgBtn}
+                    variant="ghost"
+                    size="icon"
+                    disabled={page === carPage.totalPages}
+                    onClick={() => setPage(carPage.totalPages)}
+                >
+                  »
+                </Button>
+
+                {/* Tổng */}
+                <span className="text-sm text-muted-foreground ml-2">
+        Tổng: <b>{carPage.totalElements}</b> xe
+      </span>
+              </div>
+            </div>
+        )}
 
         {/* 👉 Dùng ModalCarForm ở đây */}
         {openForm && (
