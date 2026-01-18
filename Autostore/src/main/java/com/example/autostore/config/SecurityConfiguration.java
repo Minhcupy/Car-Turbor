@@ -79,7 +79,8 @@ public class SecurityConfiguration {
                                 "/api/brands/**",
                                 "/api/user/cars/**",
                                 "/api/user/cars/featured",
-                                "api/user/bookings/**"
+                                "api/user/bookings/**",
+                                "api/pricing/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/user/bookings/**").permitAll()
                         .requestMatchers("/ws/**", "/ws-chat/**", "/api/chat/**").permitAll()
