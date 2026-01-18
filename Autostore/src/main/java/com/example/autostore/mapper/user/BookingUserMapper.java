@@ -7,20 +7,23 @@ import com.example.autostore.dto.user.BookingPreviewDTO;
 import com.example.autostore.model.Booking;
 import com.example.autostore.model.Car;
 import com.example.autostore.model.Customer;
+import com.example.autostore.model.Pricing;
 import org.springframework.stereotype.Component;
 
-import java.time.temporal.ChronoUnit;
+import java.math.BigDecimal;
 
 @Component
 public class BookingUserMapper {
 
     /**
      * Map từ Request DTO → Entity Booking
+     * ✅ Tính tiền theo Pricing + rentalUnits
      */
-    public Booking toEntity(BookingRequestDTO dto, Car car, Customer customer) {
+    public Booking toEntity(BookingRequestDTO dto, Car car, Customer customer, Pricing pricing) {
         Booking booking = new Booking();
         booking.setCar(car);
         booking.setCustomer(customer);
+
         booking.setPickupLocation(dto.getPickupLocation());
         booking.setReturnLocation(dto.getReturnLocation());
         booking.setPickupDate(dto.getPickupDate());
@@ -29,16 +32,19 @@ public class BookingUserMapper {
         booking.setReturnTime(dto.getReturnTime());
         booking.setNotes(dto.getNotes());
 
-        // Tính toán số ngày thuê
-        long days = ChronoUnit.DAYS.between(dto.getPickupDate(), dto.getReturnDate());
-        if (days <= 0) days = 1;
+        // ✅ pricing + rentalUnits
+        booking.setPricing(pricing);
 
-        Double price = car.getDailyPrice(); // giá thuê/ngày
-        if (price == null) {
-            throw new RuntimeException("Xe chưa có giá thuê theo ngày");
-        }
+        Integer units = dto.getRentalUnits();
+        if (units == null || units <= 0) units = 1;
+        booking.setRentalUnits(units);
 
-        double totalAmount = days * price;
+        // ✅ giá theo pricing
+        BigDecimal priceBD = pricing.getPrice(); // BigDecimal
+        if (priceBD == null) throw new RuntimeException("Pricing chưa có giá");
+
+        double pricePerUnit = priceBD.doubleValue();
+        double totalAmount = units * pricePerUnit;
         double depositAmount = totalAmount * 0.3;
 
         booking.setTotalAmount(totalAmount);
@@ -50,6 +56,7 @@ public class BookingUserMapper {
 
     /**
      * Map từ Booking Entity → Response DTO
+     * ✅ Trả thêm pricing + rentalUnits cho FE nếu cần
      */
     public BookingResponseDTO toResponseDTO(Booking booking) {
         BookingResponseDTO dto = new BookingResponseDTO();
@@ -60,7 +67,13 @@ public class BookingUserMapper {
         dto.setCarId(booking.getCar().getCarId());
         dto.setCarName(booking.getCar().getCarName());
         dto.setCarImage(booking.getCar().getImageUrl());
-        dto.setPrice(booking.getCar().getDailyPrice()); // map price vào DTO
+
+        // ✅ price hiển thị: lấy theo pricing (nếu có), fallback dailyPrice
+        if (booking.getPricing() != null && booking.getPricing().getPrice() != null) {
+            dto.setPrice(booking.getPricing().getPrice().doubleValue());
+        } else {
+            dto.setPrice(booking.getCar().getDailyPrice());
+        }
 
         // Thông tin thuê
         dto.setPickupLocation(booking.getPickupLocation());
@@ -76,7 +89,7 @@ public class BookingUserMapper {
         dto.setCustomerName(booking.getCustomer().getCustomerName());
         dto.setCustomerPhone(booking.getCustomer().getCustomerPhone());
         dto.setCustomerEmail(booking.getCustomer().getCustomerEmail());
-        // Nếu booking có payment thì lấy paymentId đầu tiên
+
         if (booking.getPayments() != null && !booking.getPayments().isEmpty()) {
             dto.setPaymentId(booking.getPayments().get(0).getPaymentId());
         }
@@ -85,23 +98,27 @@ public class BookingUserMapper {
     }
 
     /**
-     * Map từ Request + Car → Preview DTO
+     * Map từ Request + Pricing → Preview DTO
+     * ✅ Preview theo pricing + rentalUnits
      */
-    public BookingPreviewDTO toPreviewDTO(BookingRequestDTO dto, Car car) {
-        long days = ChronoUnit.DAYS.between(dto.getPickupDate(), dto.getReturnDate());
-        if (days <= 0) days = 1;
+    public BookingPreviewDTO toPreviewDTO(BookingRequestDTO dto, Pricing pricing) {
+        Integer units = dto.getRentalUnits();
+        if (units == null || units <= 0) units = 1;
 
-        Double price = car.getDailyPrice(); // giá thuê/ngày
-        if (price == null) {
-            throw new RuntimeException("Xe chưa có giá thuê theo ngày");
-        }
+        BigDecimal priceBD = pricing.getPrice();
+        if (priceBD == null) throw new RuntimeException("Pricing chưa có giá");
 
-        double totalAmount = days * price;
+        double pricePerUnit = priceBD.doubleValue();
+        double totalAmount = units * pricePerUnit;
         double depositAmount = totalAmount * 0.3;
 
         BookingPreviewDTO preview = new BookingPreviewDTO();
-        preview.setRentalDays((int) days);
-        preview.setDailyPrice(price);
+
+        // ✅ bạn có thể đổi tên field preview (rentalDays/dailyPrice) cho đúng nghĩa
+        // tạm thời vẫn set để UI không vỡ:
+        preview.setRentalDays(units);          // (tạm) units
+        preview.setDailyPrice(pricePerUnit);   // (tạm) pricePerUnit
+
         preview.setTotalAmount(totalAmount);
         preview.setDepositAmount(depositAmount);
 

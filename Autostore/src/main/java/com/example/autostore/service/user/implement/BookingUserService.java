@@ -4,10 +4,7 @@ import com.example.autostore.Enum.BookingStatus;
 import com.example.autostore.Enum.CarStatus;
 import com.example.autostore.dto.user.*;
 import com.example.autostore.mapper.user.BookingUserMapper;
-import com.example.autostore.model.AppUser;
-import com.example.autostore.model.Booking;
-import com.example.autostore.model.Car;
-import com.example.autostore.model.Customer;
+import com.example.autostore.model.*;
 import com.example.autostore.repository.*;
 import com.example.autostore.service.user.interfaces.IBookingUserService;
 import jakarta.transaction.Transactional;
@@ -25,26 +22,36 @@ public class BookingUserService implements IBookingUserService {
     private final ICustomerRepository customerRepository;
     private final BookingUserMapper bookingMapper;
     private final UserRepository userRepository;
+    private final PricingRepository pricingRepository;
 
     public BookingUserService(
             IBookingRepository bookingRepository,
             ICarRepository carRepository,
             ICustomerRepository customerRepository,
             BookingUserMapper bookingMapper,
-            UserRepository userRepository
+            UserRepository userRepository, PricingRepository pricingRepository
     ) {
         this.bookingRepository = bookingRepository;
         this.carRepository = carRepository;
         this.customerRepository = customerRepository;
         this.bookingMapper = bookingMapper;
         this.userRepository = userRepository;
+        this.pricingRepository = pricingRepository;
     }
 
     @Override
     public BookingPreviewDTO previewBooking(BookingRequestDTO dto) {
         Car car = carRepository.findById(dto.getCarId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy xe với ID: " + dto.getCarId()));
-        return bookingMapper.toPreviewDTO(dto, car);
+        Pricing pricing = null;
+        if (dto.getPricingId() != null) {
+            pricing = pricingRepository.findById(dto.getPricingId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy pricingId: " + dto.getPricingId()));
+        } else {
+            throw new RuntimeException("Thiếu pricingId");
+        }
+
+        return bookingMapper.toPreviewDTO(dto, pricing);
     }
 
     @Override
@@ -54,11 +61,18 @@ public class BookingUserService implements IBookingUserService {
         Car car = carRepository.findById(dto.getCarId())
                 .orElseThrow(() -> new RuntimeException("Không tìm thấy xe với ID: " + dto.getCarId()));
 
+        Pricing pricing = null;
+        if (dto.getPricingId() != null) {
+            pricing = pricingRepository.findById(dto.getPricingId())
+                    .orElseThrow(() -> new RuntimeException("Không tìm thấy pricingId: " + dto.getPricingId()));
+        }
+
         // ✅ 1) Check số lượng gốc
         Integer qty = car.getQuantity();
         if (qty == null || qty <= 0) {
             throw new RuntimeException("Xe hiện đã hết số lượng để cho thuê");
         }
+
 
         // ✅ 2) Tính số lượng khả dụng theo trạng thái xe (yêu cầu của bạn)
         // RENTED/MAINTENANCE => trừ 1 suất khả dụng
@@ -120,8 +134,11 @@ public class BookingUserService implements IBookingUserService {
         customer.setLicense_number(dto.getLicenseNumber());
         customerRepository.save(customer);
 
-        // ✅ 8) Tạo Booking
-        Booking booking = bookingMapper.toEntity(dto, car, customer);
+        if (pricing == null) {
+            throw new RuntimeException("Thiếu pricingId");
+        }
+
+        Booking booking = bookingMapper.toEntity(dto, car, customer, pricing);
         booking.setStatus(BookingStatus.PENDING);
 
         Booking saved = bookingRepository.save(booking);

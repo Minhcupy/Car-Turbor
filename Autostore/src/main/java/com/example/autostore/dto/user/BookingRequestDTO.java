@@ -14,6 +14,9 @@ public class BookingRequestDTO {
     // Xe thuê
     private Integer carId;
 
+    private Integer pricingId;
+    private Integer rentalUnits;
+
     // Thông tin thuê
     private String pickupLocation;
     private String returnLocation;

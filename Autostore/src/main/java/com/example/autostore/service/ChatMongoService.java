@@ -4,7 +4,9 @@ package com.example.autostore.service;
 import com.example.autostore.model.ChatMessageDocument;
 import com.example.autostore.repository.mongo.ChatMessageMongoRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.util.List;
@@ -34,5 +36,30 @@ public class ChatMongoService {
 
     public List<ChatMessageDocument> getConversation(long userId, long adminId) {
         return repo.findByConversationIdOrderByTimestampAsc(conversationId(userId, adminId));
+    }
+
+    public long deleteConversation(Long adminId, String conversationId) {
+
+        if (conversationId == null || conversationId.isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "conversationId is required"
+            );
+        }
+
+        boolean allowed =
+                repo.existsByConversationIdAndSenderIdOrConversationIdAndReceiverId(
+                        conversationId, adminId,
+                        conversationId, adminId
+                );
+
+        if (!allowed) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Không có quyền xóa hội thoại này"
+            );
+        }
+
+        return repo.deleteByConversationId(conversationId);
     }
 }

@@ -80,4 +80,23 @@ public class AdminChatController {
 
         return dto;
     }
+
+    @DeleteMapping("/conversations/{conversationId}")
+    public Map<String, Object> deleteConversation(
+            @PathVariable String conversationId
+    ) {
+        long deleted = chatMongoService.deleteConversation(adminId, conversationId);
+
+        messagingTemplate.convertAndSend(
+                "/topic/admin/inbox",
+                Map.of(
+                        "type", "CONVERSATION_DELETED",
+                        "conversationId", conversationId
+                )
+        );
+        return Map.of(
+                "conversationId", conversationId,
+                "deletedMessages", deleted
+        );
+    }
 }

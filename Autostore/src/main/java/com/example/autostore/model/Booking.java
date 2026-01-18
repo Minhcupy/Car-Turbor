@@ -23,6 +23,13 @@ public class Booking {
     @Column(name = "booking_id")
     private Integer bookingId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pricing_id") // tên cột mới trong DB
+    private Pricing pricing;
+
+    @Column(name = "rental_units")
+    private Integer rentalUnits;
+
     // Thông tin thuê xe
     @Column(nullable = false)
     private String pickupLocation;
