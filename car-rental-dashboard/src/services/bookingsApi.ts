@@ -32,6 +32,7 @@ export interface Page<T> {
 }
 
 const API_URL = "/admin/bookings" // ✅ baseURL đã là http://localhost:8080/api
+const BACKEND_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080/api"
 
 export const bookingsApi = {
     getPage: async (page: number, size: number, keyword?: string): Promise<Page<Booking>> => {
@@ -58,8 +59,7 @@ export const bookingsApi = {
     },
 
 
-// Lấy QR code (ảnh PNG)
     getQRCodeUrl: (id: number): string => {
-        return `${API_URL}/${id}/qrcode`
+        return `${BACKEND_BASE}${API_URL}/${id}/qrcode`
     },
 }
