@@ -17,7 +17,6 @@ import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { fleetApi } from "@/src/services/fleetApi"
 
-// ✅ Fix icon mặc định của Leaflet
 const defaultIcon = L.icon({
   iconUrl: "/marker-icon.png",
   shadowUrl: "/marker-shadow.png",
