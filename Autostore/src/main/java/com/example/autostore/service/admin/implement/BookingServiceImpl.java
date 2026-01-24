@@ -1,8 +1,11 @@
 package com.example.autostore.service.admin.implement;
 
+import com.example.autostore.Enum.CarStatus;
 import com.example.autostore.model.Booking;
 import com.example.autostore.Enum.BookingStatus;
+import com.example.autostore.model.Car;
 import com.example.autostore.repository.IBookingRepository;
+import com.example.autostore.repository.ICarRepository;
 import com.example.autostore.service.admin.interfaces.IBookingService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -15,9 +18,11 @@ import java.util.List;
 public class BookingServiceImpl implements IBookingService {
 
     private final IBookingRepository bookingRepository;
+    private final ICarRepository carRepository;
 
-    public BookingServiceImpl(IBookingRepository bookingRepository) {
+    public BookingServiceImpl(IBookingRepository bookingRepository, ICarRepository carRepository) {
         this.bookingRepository = bookingRepository;
+        this.carRepository = carRepository;
     }
 
     @Override
@@ -36,6 +41,18 @@ public class BookingServiceImpl implements IBookingService {
     public Booking updateBookingStatus(Integer id, BookingStatus status) {
         Booking booking = getBookingById(id);
         booking.setStatus(status);
+
+        Car car = booking.getCar();
+        if (car != null) {
+            if (status == BookingStatus.CONFIRMED) {
+                car.setStatus(CarStatus.RENTED);
+                carRepository.save(car);
+            } else if (status == BookingStatus.COMPLETED || status == BookingStatus.CANCELED) {
+                car.setStatus(CarStatus.AVAILABLE);
+                carRepository.save(car);
+            }
+        }
+
         return bookingRepository.save(booking);
     }
 
