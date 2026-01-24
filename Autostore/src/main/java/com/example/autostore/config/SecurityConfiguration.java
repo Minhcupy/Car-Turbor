@@ -80,7 +80,8 @@ public class SecurityConfiguration {
                                 "/api/user/cars/**",
                                 "/api/user/cars/featured",
                                 "api/user/bookings/**",
-                                "api/pricing/**"
+                                "api/pricing/**",
+                                "/api/admin/bookings/*/qrcode"
                         ).permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/user/bookings/**").permitAll()
                         .requestMatchers("/ws/**", "/ws-chat/**", "/api/chat/**").permitAll()
