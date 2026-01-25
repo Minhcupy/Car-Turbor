@@ -67,7 +67,8 @@ export interface BookingResponseDTO {
     customerPhone: string
     customerEmail: string
     licenseNumber: string
-
+    contractId?: number
+    contractStatus?: string
 }
 
 export interface BookingPreviewDTO {

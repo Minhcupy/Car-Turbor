@@ -58,7 +58,9 @@ public class BookingServiceImpl implements IBookingService {
 
     @Override
     public void deleteBooking(Integer id) {
-        bookingRepository.deleteById(id);
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Booking not found"));
+        bookingRepository.delete(booking);
     }
 
     @Override

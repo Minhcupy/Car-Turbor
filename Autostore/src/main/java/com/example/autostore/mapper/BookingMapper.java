@@ -21,6 +21,8 @@ public class BookingMapper {
         dto.setTotalAmount(booking.getTotalAmount());
         dto.setDepositAmount(booking.getDepositAmount());
         dto.setStatus(booking.getStatus() != null ? booking.getStatus().name() : null);
+        dto.setContractId(booking.getContract() != null ? booking.getContract().getId() : null);
+        dto.setContractStatus(booking.getContract() != null ? booking.getContract().getStatus().name() : null);
 
         if (booking.getCustomer() != null) {
             dto.setCustomerName(booking.getCustomer().getAppUser().getUserFullName());

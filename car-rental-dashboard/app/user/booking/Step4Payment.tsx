@@ -3,7 +3,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
 import Webcam from "react-webcam"
-import { ArrowLeft, Download, AlertCircle } from "lucide-react"
+import { ArrowLeft, Download, AlertCircle, FileSignature } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -15,10 +15,16 @@ import type {
     BookingPreviewDTO,
     BookingResponseDTO,
     CarItem,
-} from "@/src/services/user/apiBookingUserService "
-import { paymentApi, PaymentResponseDTO } from "@/src/services/user/paymentApi"
+} from "@/src/services/user/apiBookingUserService " // ✅ bỏ dấu cách cuối
+import { paymentApi, type PaymentResponseDTO } from "@/src/services/user/paymentApi"
 import type { Pricing } from "@/src/services/user/pricingApi"
 import { createFaceChallenge, verifyFace } from "@/src/services/user/faceApi"
+import {
+    signElectronic,
+    signDigital,
+    downloadContractPdf, // ✅ dùng blob
+    type ContractDTO,
+} from "@/src/services/user/contractApi"
 
 // ================== Config ==================
 const paymentMethods = [
@@ -27,10 +33,12 @@ const paymentMethods = [
     { key: "MOMO", label: "Ví MoMo" },
     { key: "VNPAY", label: "VNPay" },
     { key: "CREDIT_CARD", label: "Thẻ tín dụng" },
-]
+] as const
+
+type PaymentMethod = (typeof paymentMethods)[number]["key"]
 
 const FACE_TOKEN_KEY = "faceVerifiedToken"
-const FACE_HEADER = "X-Face-Verified" // đổi nếu BE dùng header khác
+const FACE_HEADER = "X-Face-Verified"
 
 // ================== Types ==================
 interface Step4PaymentProps {
@@ -62,7 +70,7 @@ function money(n: number) {
     return (n ?? 0).toLocaleString("vi-VN")
 }
 
-/** ✅ Resize + nén ảnh webcam -> File jpeg (giảm size, ổn định upload) */
+/** Resize + nén ảnh webcam -> File jpeg */
 async function dataUrlToJpegFile(dataUrl: string, filename = "face.jpg") {
     const img = document.createElement("img")
     img.src = dataUrl
@@ -96,6 +104,10 @@ async function dataUrlToJpegFile(dataUrl: string, filename = "face.jpg") {
     return new File([blob], filename, { type: "image/jpeg" })
 }
 
+function isValidContractStatus(x: any): x is ContractDTO["status"] {
+    return x === "DRAFT" || x === "SIGNED_ELECTRONIC" || x === "SIGNED_DIGITAL" || x === "VOID"
+}
+
 // ================== Component ==================
 export default function Step4Payment({
                                          selectedCar,
@@ -108,7 +120,7 @@ export default function Step4Payment({
     const [loading, setLoading] = useState(false)
     const [booking, setBooking] = useState<BookingResponseDTO | null>(null)
     const [payment, setPayment] = useState<PaymentResponseDTO | null>(null)
-    const [paymentMethod, setPaymentMethod] = useState<string>("SIMULATED")
+    const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("SIMULATED")
     const [agree, setAgree] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
@@ -119,8 +131,23 @@ export default function Step4Payment({
     const [facePreview, setFacePreview] = useState<string | null>(null)
     const [faceToken, setFaceToken] = useState<string | null>(null)
     const [faceStatus, setFaceStatus] = useState<string>("")
-
     const faceVerified = !!faceToken
+
+    // ===== Contract signing state =====
+    const [contractId, setContractId] = useState<number | null>(null)
+    const [contractStatus, setContractStatus] = useState<ContractDTO["status"] | "">("")
+    const [showContractStep, setShowContractStep] = useState(false)
+    const [signing, setSigning] = useState(false)
+    const [signedElectronic, setSignedElectronic] = useState(false)
+    const [signedDigital, setSignedDigital] = useState(false)
+
+    // ✅ PDF preview via Blob URL (có JWT)
+    const [pdfUrl, setPdfUrl] = useState("")
+    const [pdfLoading, setPdfLoading] = useState(false)
+
+    // signature canvas
+    const sigCanvasRef = useRef<HTMLCanvasElement>(null)
+    const [sigEmpty, setSigEmpty] = useState(true)
 
     // load token when refresh
     useEffect(() => {
@@ -142,14 +169,7 @@ export default function Step4Payment({
         const total = rentalUnits * pricePerUnit
         const deposit = Math.round(total * 0.3)
         const remain = total - deposit
-        return {
-            unitText: unitLabel(selectedPricing.unit),
-            units: rentalUnits,
-            pricePerUnit,
-            total,
-            deposit,
-            remain,
-        }
+        return { unitText: unitLabel(selectedPricing.unit), units: rentalUnits, pricePerUnit, total, deposit, remain }
     }, [selectedPricingId, selectedPricing, rentalUnits])
 
     // ===== view =====
@@ -165,7 +185,6 @@ export default function Step4Payment({
             setErrorMsg(null)
             setFaceStatus("Đang tạo thử thách...")
 
-            // tạo challenge mới => xoá token cũ + preview cũ
             setFaceToken(null)
             sessionStorage.removeItem(FACE_TOKEN_KEY)
             setFacePreview(null)
@@ -183,10 +202,7 @@ export default function Step4Payment({
 
     function handleFaceCapture() {
         const imgSrc = webcamRef.current?.getScreenshot()
-        if (!imgSrc) {
-            setFaceStatus("Không chụp được ảnh ❌")
-            return
-        }
+        if (!imgSrc) return setFaceStatus("Không chụp được ảnh ❌")
         setFacePreview(imgSrc)
         setFaceStatus("Chụp ảnh thành công ✅")
     }
@@ -197,15 +213,13 @@ export default function Step4Payment({
 
         try {
             setFaceStatus("Đang xác minh...")
-
             const file = await dataUrlToJpegFile(facePreview, "face.jpg")
             const res = await verifyFace(challengeId, file)
 
             if (!res.verified || !res.faceVerifiedToken) {
                 setFaceToken(null)
                 sessionStorage.removeItem(FACE_TOKEN_KEY)
-                setFaceStatus("Không khớp khuôn mặt ❌")
-                return
+                return setFaceStatus("Không khớp khuôn mặt ❌")
             }
 
             setFaceToken(res.faceVerifiedToken)
@@ -225,53 +239,214 @@ export default function Step4Payment({
         setFaceStatus("Đã reset.")
     }
 
-    // ================== Payment Flow ==================
-    const handlePayment = async () => {
-        if (!selectedPricingId) return setErrorMsg("Chưa chọn kiểu thuê. Vui lòng quay lại bước 1.")
-        if (!preview && !calc) return setErrorMsg("Thiếu dữ liệu tạm tính. Vui lòng quay lại bước 2.")
-        if (!formData?.pickupDate || !formData?.pickupTime || !formData?.returnDate || !formData?.returnTime) {
-            return setErrorMsg("Thiếu ngày/giờ nhận-trả. Vui lòng quay lại bước 2.")
+    // ================== Signature Canvas ==================
+    function initSigCanvas() {
+        const canvas = sigCanvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return
+        ctx.lineWidth = 2
+        ctx.lineCap = "round"
+        ctx.strokeStyle = "#000"
+    }
+
+    function clearSignature() {
+        const canvas = sigCanvasRef.current
+        const ctx = canvas?.getContext("2d")
+        if (!canvas || !ctx) return
+        ctx.clearRect(0, 0, canvas.width, canvas.height)
+        setSigEmpty(true)
+    }
+
+    function signatureToDataUrlPng() {
+        const canvas = sigCanvasRef.current
+        if (!canvas) return null
+        return canvas.toDataURL("image/png")
+    }
+
+    function attachDrawHandlers(canvas: HTMLCanvasElement) {
+        const ctx = canvas.getContext("2d")
+        if (!ctx) return () => {}
+
+        let drawing = false
+
+        const getPos = (e: MouseEvent | TouchEvent) => {
+            const rect = canvas.getBoundingClientRect()
+            if ("touches" in e) {
+                const t = e.touches[0]
+                return { x: t.clientX - rect.left, y: t.clientY - rect.top }
+            }
+            const m = e as MouseEvent
+            return { x: m.clientX - rect.left, y: m.clientY - rect.top }
         }
 
-        // ✅ bắt buộc xác minh khuôn mặt trước
-        const token = faceToken || sessionStorage.getItem(FACE_TOKEN_KEY)
-        if (!token) return setErrorMsg("Bạn phải xác minh khuôn mặt trước khi thanh toán.")
+        const start = (e: any) => {
+            drawing = true
+            const p = getPos(e)
+            ctx.beginPath()
+            ctx.moveTo(p.x, p.y)
+            e.preventDefault()
+        }
 
-        setLoading(true)
-        setErrorMsg(null)
+        const move = (e: any) => {
+            if (!drawing) return
+            const p = getPos(e)
+            ctx.lineTo(p.x, p.y)
+            ctx.stroke()
+            setSigEmpty(false)
+            e.preventDefault()
+        }
+
+        const end = (e: any) => {
+            drawing = false
+            e.preventDefault()
+        }
+
+        canvas.addEventListener("mousedown", start)
+        canvas.addEventListener("mousemove", move)
+        window.addEventListener("mouseup", end)
+
+        canvas.addEventListener("touchstart", start, { passive: false })
+        canvas.addEventListener("touchmove", move, { passive: false })
+        window.addEventListener("touchend", end)
+
+        return () => {
+            canvas.removeEventListener("mousedown", start)
+            canvas.removeEventListener("mousemove", move)
+            window.removeEventListener("mouseup", end)
+
+            canvas.removeEventListener("touchstart", start)
+            canvas.removeEventListener("touchmove", move)
+            window.removeEventListener("touchend", end)
+        }
+    }
+
+    useEffect(() => {
+        if (!showContractStep) return
+        initSigCanvas()
+        const canvas = sigCanvasRef.current
+        if (!canvas) return
+        return attachDrawHandlers(canvas)
+    }, [showContractStep])
+
+    // ✅ chọn loại pdf hiện tại
+    const currentPdfType: "unsigned" | "electronic" | "digital" =
+        signedDigital ? "digital" : signedElectronic ? "electronic" : "unsigned"
+
+    // ✅ Load PDF bằng axios -> blobUrl (fix iframe không có JWT)
+    useEffect(() => {
+        if (!contractId || !showContractStep) return
+
+        let cancelled = false
+        let revoke: string | null = null
+
+        const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+        async function loadPdf() {
+            setPdfLoading(true)
+            setErrorMsg(null)
+            setPdfUrl("")
+
+            const maxTry = 12
+            const delayMs = 700
+
+            for (let i = 1; i <= maxTry; i++) {
+                if (cancelled) return
+                try {
+                    if (contractId == null) return
+                    const blob = await downloadContractPdf(contractId, currentPdfType)
+                    if (cancelled) return
+                    const url = URL.createObjectURL(blob)
+                    revoke = url
+                    setPdfUrl(url)
+                    setPdfLoading(false)
+                    return
+                } catch (e: any) {
+                    const msg =
+                        e?.response?.data?.message ||
+                        e?.response?.data ||
+                        e?.message ||
+                        "Không tải được PDF hợp đồng"
+
+                    const shouldRetry =
+                        typeof msg === "string" && msg.toLowerCase().includes("chưa sẵn sàng")
+
+                    if (!shouldRetry || i === maxTry) {
+                        setPdfLoading(false)
+                        setPdfUrl("")
+                        setErrorMsg(String(msg))
+                        return
+                    }
+                    await sleep(delayMs)
+                }
+            }
+        }
+
+        loadPdf()
+
+        return () => {
+            cancelled = true
+            if (revoke) URL.revokeObjectURL(revoke)
+        }
+    }, [contractId, currentPdfType, showContractStep])
+
+    // ================== Contract Actions ==================
+    async function handleSignElectronic() {
+        if (!contractId) return setErrorMsg("Thiếu contractId")
+        if (!agree) return setErrorMsg("Bạn cần đồng ý điều khoản trước khi ký.")
+        if (sigEmpty) return setErrorMsg("Bạn chưa ký. Vui lòng ký vào khung chữ ký.")
 
         try {
-            // 1) Create booking + header face token
-            const dto: BookingRequestDTO = {
-                carId: selectedCar.carId,
-                pricingId: selectedPricingId,
-                rentalUnits,
+            setSigning(true)
+            setErrorMsg(null)
 
-                pickupLocation: formData.pickupLocation || "",
-                returnLocation: formData.returnLocation || "",
-                pickupDate: formData.pickupDate,
-                returnDate: formData.returnDate,
-                pickupTime: formData.pickupTime || "08:00",
-                returnTime: formData.returnTime || "18:00",
+            const dataUrl = signatureToDataUrlPng()
+            if (!dataUrl) throw new Error("Không lấy được chữ ký từ canvas")
 
-                notes: formData.notes || "",
-                fullName: formData.fullName || "",
-                email: formData.email || "",
-                phone: formData.phone || "",
-                address: formData.address || "",
-                idNumber: formData.idNumber || "",
-                licenseNumber: formData.licenseNumber || "",
-            } as any
+            const contract = await signElectronic(contractId, {
+                signaturePngBase64: dataUrl,
+                signerName: formData.fullName || "Customer",
+                consent: true,
+            })
 
-            const bookingRes = (
-                await api.post("/user/bookings", dto, { headers: { [FACE_HEADER]: token } })
-            ).data as BookingResponseDTO
+            setContractStatus(contract.status)
+            setSignedElectronic(true)
+            setSignedDigital(contract.status === "SIGNED_DIGITAL")
+            // PDF sẽ auto reload vì currentPdfType đổi sang electronic
+        } catch (e: any) {
+            setErrorMsg(e?.response?.data?.message || e.message || "Ký hợp đồng lỗi")
+        } finally {
+            setSigning(false)
+        }
+    }
 
-            setBooking(bookingRes)
+    async function handleSignDigital() {
+        if (!contractId) return setErrorMsg("Thiếu contractId")
+        try {
+            setSigning(true)
+            setErrorMsg(null)
 
-            // 2) Create payment
+            const contract = await signDigital(contractId)
+            setContractStatus(contract.status)
+            setSignedDigital(true)
+            // PDF sẽ auto reload vì currentPdfType đổi sang digital
+        } catch (e: any) {
+            setErrorMsg(e?.response?.data?.message || e.message || "Ký số lỗi")
+        } finally {
+            setSigning(false)
+        }
+    }
+
+    async function handlePayAfterSign() {
+        if (!booking?.bookingId) return setErrorMsg("Chưa có bookingId")
+        if (!signedElectronic) return setErrorMsg("Bạn phải ký hợp đồng trước khi thanh toán.")
+
+        try {
+            setLoading(true)
+            setErrorMsg(null)
+
             const paymentCreated = await paymentApi.createPayment(
-                bookingRes.bookingId,
+                booking.bookingId,
                 {
                     payerName: formData.fullName,
                     payerEmail: formData.email,
@@ -282,16 +457,82 @@ export default function Step4Payment({
 
             if (!paymentCreated?.paymentId) throw new Error("Không nhận được paymentId từ server")
 
-            // 3) Simulate pay
             const payRes = await paymentApi.simulatePay(paymentCreated.paymentId)
             setPayment(payRes)
+            setShowContractStep(false)
         } catch (err: any) {
-            console.error("❌ Payment error:", err)
             const message =
                 err.response?.data?.error ||
                 err.response?.data?.message ||
                 err.message ||
                 "Có lỗi xảy ra khi xử lý thanh toán."
+            setErrorMsg(message)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    // ================== Payment Flow ==================
+    const handlePayment = async () => {
+        if (!selectedPricingId) return setErrorMsg("Chưa chọn kiểu thuê. Vui lòng quay lại bước 1.")
+        if (!preview && !calc) return setErrorMsg("Thiếu dữ liệu tạm tính. Vui lòng quay lại bước 2.")
+        if (!formData?.pickupDate || !formData?.pickupTime || !formData?.returnDate || !formData?.returnTime) {
+            return setErrorMsg("Thiếu ngày/giờ nhận-trả. Vui lòng quay lại bước 2.")
+        }
+
+        const token = faceToken || sessionStorage.getItem(FACE_TOKEN_KEY)
+        if (!token) return setErrorMsg("Bạn phải xác minh khuôn mặt trước khi tiếp tục.")
+
+        setLoading(true)
+        setErrorMsg(null)
+
+        try {
+            // reset contract states for new booking
+            setContractId(null)
+            setContractStatus("")
+            setSignedElectronic(false)
+            setSignedDigital(false)
+            setSigEmpty(true)
+            setShowContractStep(false)
+            setPdfUrl("")
+
+            const dto: BookingRequestDTO = {
+                carId: selectedCar.carId,
+                pricingId: selectedPricingId,
+                rentalUnits,
+                pickupLocation: formData.pickupLocation || "",
+                returnLocation: formData.returnLocation || "",
+                pickupDate: formData.pickupDate,
+                returnDate: formData.returnDate,
+                pickupTime: formData.pickupTime || "08:00",
+                returnTime: formData.returnTime || "18:00",
+                notes: formData.notes || "",
+                fullName: formData.fullName || "",
+                email: formData.email || "",
+                phone: formData.phone || "",
+                address: formData.address || "",
+                idNumber: formData.idNumber || "",
+                licenseNumber: formData.licenseNumber || "",
+            }
+
+            const bookingRes = (await api.post<BookingResponseDTO>("/user/bookings", dto, { headers: { [FACE_HEADER]: token } }))
+                .data
+
+            setBooking(bookingRes)
+
+            if (!bookingRes.contractId) throw new Error("Server không trả contractId")
+            setContractId(bookingRes.contractId)
+
+            const st = bookingRes.contractStatus
+            setContractStatus(isValidContractStatus(st) ? st : "DRAFT")
+
+            setShowContractStep(true)
+        } catch (err: any) {
+            const message =
+                err.response?.data?.error ||
+                err.response?.data?.message ||
+                err.message ||
+                "Có lỗi xảy ra khi tạo booking."
             setErrorMsg(message)
         } finally {
             setLoading(false)
@@ -360,15 +601,15 @@ export default function Step4Payment({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span
-                              className={`text-sm font-semibold px-2 py-1 rounded-md border ${
-                                  faceVerified
-                                      ? "text-green-700 border-green-200 bg-green-50"
-                                      : "text-red-700 border-red-200 bg-red-50"
-                              }`}
-                          >
-                            {faceVerified ? "Đã xác minh ✅" : "Chưa xác minh ❌"}
-                          </span>
+              <span
+                  className={`text-sm font-semibold px-2 py-1 rounded-md border ${
+                      faceVerified
+                          ? "text-green-700 border-green-200 bg-green-50"
+                          : "text-red-700 border-red-200 bg-red-50"
+                  }`}
+              >
+                {faceVerified ? "Đã xác minh ✅" : "Chưa xác minh ❌"}
+              </span>
 
                             <Button type="button" variant="outline" onClick={handleResetFace}>
                                 Reset
@@ -377,13 +618,8 @@ export default function Step4Payment({
                     </CardHeader>
 
                     <CardContent className="space-y-4">
-                        {/* Actions */}
                         <div className="flex flex-wrap gap-2">
-                            <Button
-                                type="button"
-                                className="bg-sky-600 hover:bg-sky-700 text-white"
-                                onClick={handleFaceChallenge}
-                            >
+                            <Button type="button" className="bg-sky-600 hover:bg-sky-700 text-white" onClick={handleFaceChallenge}>
                                 Bắt đầu xác minh
                             </Button>
 
@@ -402,45 +638,28 @@ export default function Step4Payment({
                                 onClick={handleFaceVerify}
                                 disabled={!challengeId || !facePreview}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                                title={
-                                    !challengeId
-                                        ? "Hãy bấm 'Bắt đầu xác minh' trước"
-                                        : !facePreview
-                                            ? "Hãy chụp ảnh trước"
-                                            : undefined
-                                }
                             >
                                 Xác minh
                             </Button>
                         </div>
 
-                        {/* Steps + Status (ẩn challengeId) */}
                         <div className="text-sm text-gray-700 space-y-1">
                             <div>
                                 <b>Bước:</b>{" "}
-                                {steps.length ? (
-                                    <span className="text-gray-700">{steps.join(", ")}</span>
-                                ) : (
-                                    <span className="text-gray-400">-</span>
-                                )}
+                                {steps.length ? <span className="text-gray-700">{steps.join(", ")}</span> : <span className="text-gray-400">-</span>}
                             </div>
-
                             <div className="flex items-center gap-2">
                                 <b>Trạng thái:</b>
-                                <span className={`${faceVerified ? "text-green-700" : "text-gray-600"}`}>
-                                  {faceStatus || "-"}
-                                </span>
+                                <span className={`${faceVerified ? "text-green-700" : "text-gray-600"}`}>{faceStatus || "-"}</span>
                             </div>
                         </div>
 
-                        {/* Camera + Preview */}
                         <div className="grid md:grid-cols-2 gap-4">
                             <div className="rounded-xl border bg-white p-3">
                                 <div className="flex items-center justify-between mb-2">
                                     <p className="text-sm font-semibold text-gray-800">Camera</p>
                                     <span className="text-xs text-gray-500">*đủ sáng, nhìn thẳng</span>
                                 </div>
-
                                 <div className="overflow-hidden rounded-xl bg-black aspect-video">
                                     <Webcam
                                         ref={webcamRef}
@@ -455,13 +674,8 @@ export default function Step4Payment({
                             <div className="rounded-xl border bg-white p-3">
                                 <div className="flex items-center justify-between mb-2">
                                     <p className="text-sm font-semibold text-gray-800">Ảnh đã chụp</p>
-                                    {facePreview ? (
-                                        <span className="text-xs text-green-700">Đã có ảnh ✅</span>
-                                    ) : (
-                                        <span className="text-xs text-gray-500">Chưa có ảnh</span>
-                                    )}
+                                    {facePreview ? <span className="text-xs text-green-700">Đã có ảnh ✅</span> : <span className="text-xs text-gray-500">Chưa có ảnh</span>}
                                 </div>
-
                                 <div className="overflow-hidden rounded-xl bg-gray-100 aspect-video flex items-center justify-center">
                                     {facePreview ? (
                                         <img src={facePreview} alt="face-preview" className="w-full h-full object-cover" />
@@ -472,37 +686,119 @@ export default function Step4Payment({
                             </div>
                         </div>
 
-                        {!faceVerified && (
-                            <div className="text-sm text-red-600">
-                                Bạn cần xác minh khuôn mặt trước khi có thể thanh toán.
-                            </div>
-                        )}
+                        {!faceVerified && <div className="text-sm text-red-600">Bạn cần xác minh khuôn mặt trước khi có thể tiếp tục.</div>}
                     </CardContent>
                 </Card>
 
-                {/* Chọn phương thức */}
-                <Card className="border-sky-100 shadow-lg">
-                    <CardHeader>
-                        <CardTitle className="text-gray-800">Chọn Phương Thức Thanh Toán</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid md:grid-cols-3 gap-4">
-                        {paymentMethods.map((m) => (
-                            <Button
-                                key={m.key}
-                                variant="ghost"
-                                onClick={() => setPaymentMethod(m.key)}
-                                className={`relative flex items-center justify-center p-0 h-24 border rounded-xl overflow-hidden transition-all
-                  ${
-                                    paymentMethod === m.key
-                                        ? "border-sky-500 shadow-md scale-105"
-                                        : "border-gray-200 hover:border-sky-300 hover:shadow-sm"
-                                }`}
-                            >
-                                <span className="font-semibold">{m.label}</span>
-                            </Button>
-                        ))}
-                    </CardContent>
-                </Card>
+                {/* ===== CONTRACT STEP ===== */}
+                {showContractStep && contractId && (
+                    <Card className="border-sky-100 shadow-lg">
+                        <CardHeader>
+                            <CardTitle className="text-gray-800 flex items-center gap-2">
+                                <FileSignature className="w-5 h-5" />
+                                Ký hợp đồng thuê xe
+                            </CardTitle>
+                            <p className="text-sm text-gray-500">Bạn phải ký hợp đồng trước khi thanh toán.</p>
+                        </CardHeader>
+
+                        <CardContent className="space-y-4">
+                            <div className="text-sm">
+                                <b>ContractId:</b> {contractId} • <b>Trạng thái:</b>{" "}
+                                <span className="font-semibold">{contractStatus || "DRAFT"}</span>
+                            </div>
+
+                            {/* ✅ Preview PDF bằng Blob URL */}
+                            <div className="rounded-xl border overflow-hidden">
+                                {pdfUrl ? (
+                                    <iframe src={pdfUrl} className="w-full h-[520px]" />
+                                ) : (
+                                    <div className="p-4 text-sm text-gray-600">
+                                        {pdfLoading ? "Đang tải hợp đồng..." : "Chưa tải được hợp đồng"}
+                                    </div>
+                                )}
+                            </div>
+
+                            {!signedElectronic && (
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-sm font-semibold text-gray-800">Chữ ký</p>
+                                        <Button type="button" variant="outline" onClick={clearSignature}>
+                                            Xoá chữ ký
+                                        </Button>
+                                    </div>
+
+                                    <canvas ref={sigCanvasRef} width={900} height={240} className="w-full bg-white border rounded-xl" />
+                                    <p className="text-xs text-gray-500">* Ký bằng chuột hoặc cảm ứng.</p>
+                                </div>
+                            )}
+
+                            <div className="flex flex-wrap gap-2">
+                                {!signedElectronic ? (
+                                    <Button
+                                        type="button"
+                                        onClick={handleSignElectronic}
+                                        disabled={signing || sigEmpty || !agree}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                        title={!agree ? "Bạn cần đồng ý điều khoản" : sigEmpty ? "Bạn chưa ký" : undefined}
+                                    >
+                                        {signing ? "Đang ký..." : "Ký hợp đồng (A)"}
+                                    </Button>
+                                ) : (
+                                    <Button type="button" disabled className="bg-emerald-600 text-white">
+                                        Đã ký điện tử ✅
+                                    </Button>
+                                )}
+
+                                {signedElectronic && !signedDigital && (
+                                    <Button type="button" onClick={handleSignDigital} disabled={signing} variant="outline">
+                                        {signing ? "Đang ký số..." : "Ký số (B - optional)"}
+                                    </Button>
+                                )}
+
+                                {signedDigital && (
+                                    <Button type="button" disabled variant="outline">
+                                        Đã ký số ✅
+                                    </Button>
+                                )}
+
+                                <Button
+                                    type="button"
+                                    onClick={handlePayAfterSign}
+                                    disabled={!signedElectronic || loading}
+                                    className="bg-sky-500 hover:bg-sky-600 text-white"
+                                >
+                                    Thanh toán sau khi ký
+                                </Button>
+                            </div>
+
+                            <div className="text-xs text-gray-500">
+                                *Ký số (B) là server-side bằng key test/self-signed nên Adobe có thể báo “Unknown/Not trusted”.
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Chọn phương thức (ẩn khi đang ký hợp đồng) */}
+                {!showContractStep && (
+                    <Card className="border-sky-100 shadow-lg">
+                        <CardHeader>
+                            <CardTitle className="text-gray-800">Chọn Phương Thức Thanh Toán</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid md:grid-cols-3 gap-4">
+                            {paymentMethods.map((m) => (
+                                <Button
+                                    key={m.key}
+                                    variant="ghost"
+                                    onClick={() => setPaymentMethod(m.key)}
+                                    className={`relative flex items-center justify-center p-0 h-24 border rounded-xl overflow-hidden transition-all
+                    ${paymentMethod === m.key ? "border-sky-500 shadow-md scale-105" : "border-gray-200 hover:border-sky-300 hover:shadow-sm"}`}
+                                >
+                                    <span className="font-semibold">{m.label}</span>
+                                </Button>
+                            ))}
+                        </CardContent>
+                    </Card>
+                )}
 
                 {/* Điều khoản */}
                 <div className="flex items-center gap-2">
@@ -519,7 +815,7 @@ export default function Step4Payment({
                 {loading && (
                     <Card className="border-sky-200 bg-sky-50">
                         <CardHeader>
-                            <CardTitle className="text-sky-600">Đang xử lý thanh toán...</CardTitle>
+                            <CardTitle className="text-sky-600">Đang xử lý...</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <Skeleton className="h-6 w-1/2" />
@@ -589,19 +885,21 @@ export default function Step4Payment({
 
                         <Button
                             onClick={handlePayment}
-                            disabled={!agree || !selectedPricingId || !faceVerified}
+                            disabled={!agree || !selectedPricingId || !faceVerified || showContractStep}
                             className="bg-sky-500 hover:bg-sky-600 text-white"
                             title={
-                                !selectedPricingId
-                                    ? "Chưa chọn kiểu thuê"
-                                    : !agree
-                                        ? "Bạn chưa đồng ý điều khoản"
-                                        : !faceVerified
-                                            ? "Bạn chưa xác minh khuôn mặt"
-                                            : undefined
+                                showContractStep
+                                    ? "Bạn đang ở bước ký hợp đồng"
+                                    : !selectedPricingId
+                                        ? "Chưa chọn kiểu thuê"
+                                        : !agree
+                                            ? "Bạn chưa đồng ý điều khoản"
+                                            : !faceVerified
+                                                ? "Bạn chưa xác minh khuôn mặt"
+                                                : undefined
                             }
                         >
-                            Thanh toán ({paymentMethod})
+                            Tạo booking & ký hợp đồng
                         </Button>
                     </div>
                 )}
@@ -672,8 +970,12 @@ export default function Step4Payment({
                         )}
 
                         {!faceVerified && (
-                            <p className="text-sm text-red-600">
-                                Chưa xác minh khuôn mặt — không thể thanh toán.
+                            <p className="text-sm text-red-600">Chưa xác minh khuôn mặt — không thể tiếp tục.</p>
+                        )}
+
+                        {showContractStep && (
+                            <p className="text-sm text-sky-700">
+                                Bạn đang ở bước ký hợp đồng. Hãy ký xong rồi bấm “Thanh toán sau khi ký”.
                             </p>
                         )}
                     </CardContent>

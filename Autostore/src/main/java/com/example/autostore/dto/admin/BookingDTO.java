@@ -31,4 +31,7 @@ public class BookingDTO {
     // Xe
     private String carName;
     private String brandName;
+
+    private Integer contractId;
+    private String contractStatus; // hoặc enum ContractStatus
 }

@@ -74,6 +74,8 @@ public class Booking {
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Payment> payments;
 
+    @OneToOne(mappedBy = "booking", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Contract contract;
 
     // Thời gian tạo & cập nhật
     @Column(updatable = false)

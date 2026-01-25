@@ -85,6 +85,8 @@ public class SecurityConfiguration {
                         ).permitAll()
                         .requestMatchers("/api/face/**").authenticated()
                         .requestMatchers("/error").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/user/contracts/*/download").permitAll()
+                        .requestMatchers("/api/user/contracts/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/user/bookings/**").permitAll()
                         .requestMatchers("/ws/**", "/ws-chat/**", "/api/chat/**").permitAll()
                         .requestMatchers("/api/chatbot").permitAll()

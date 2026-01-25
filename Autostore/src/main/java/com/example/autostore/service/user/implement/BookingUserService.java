@@ -2,10 +2,13 @@ package com.example.autostore.service.user.implement;
 
 import com.example.autostore.Enum.BookingStatus;
 import com.example.autostore.Enum.CarStatus;
+import com.example.autostore.Enum.ContractStatus;
 import com.example.autostore.dto.user.*;
 import com.example.autostore.mapper.user.BookingUserMapper;
 import com.example.autostore.model.*;
 import com.example.autostore.repository.*;
+import com.example.autostore.service.ContractContentService;
+import com.example.autostore.service.ContractService;
 import com.example.autostore.service.user.interfaces.IBookingUserService;
 import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
@@ -23,13 +26,17 @@ public class BookingUserService implements IBookingUserService {
     private final BookingUserMapper bookingMapper;
     private final UserRepository userRepository;
     private final PricingRepository pricingRepository;
+    private final ContractRepository contractRepository;
+    private final ContractContentService contractContentService;
+    private final ContractService contractService;
+
 
     public BookingUserService(
             IBookingRepository bookingRepository,
             ICarRepository carRepository,
             ICustomerRepository customerRepository,
             BookingUserMapper bookingMapper,
-            UserRepository userRepository, PricingRepository pricingRepository
+            UserRepository userRepository, PricingRepository pricingRepository, ContractRepository contractRepository, ContractContentService contractContentService, ContractService contractService
     ) {
         this.bookingRepository = bookingRepository;
         this.carRepository = carRepository;
@@ -37,6 +44,9 @@ public class BookingUserService implements IBookingUserService {
         this.bookingMapper = bookingMapper;
         this.userRepository = userRepository;
         this.pricingRepository = pricingRepository;
+        this.contractRepository = contractRepository;
+        this.contractContentService = contractContentService;
+        this.contractService = contractService;
     }
 
     @Override
@@ -142,7 +152,26 @@ public class BookingUserService implements IBookingUserService {
         booking.setStatus(BookingStatus.PENDING);
 
         Booking saved = bookingRepository.save(booking);
-        return bookingMapper.toResponseDTO(saved);
+        Contract contract = Contract.builder()
+                .booking(saved)
+                .status(ContractStatus.DRAFT)
+                .contentHtml(contractContentService.buildHtml(saved))
+                .build();
+
+        contract = contractRepository.save(contract);
+
+// ✅ tạo file unsigned ngay lập tức để FE preview/download được
+        try {
+            contractService.ensureUnsignedPdf(contract.getId());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+
+
+        BookingResponseDTO res = bookingMapper.toResponseDTO(saved);
+        res.setContractId(contract.getId());
+        res.setContractStatus(contract.getStatus().name());
+        return res;
     }
 
     public AvailabilityDTO checkAvailability(Integer carId, LocalDateTime startDT, LocalDateTime endDT) {

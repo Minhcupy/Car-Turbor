@@ -35,6 +35,6 @@ public class BookingResponseDTO {
     private String customerPhone;
     private String customerEmail;
     private Integer paymentId;
-
-
+    private Integer contractId;
+    private String contractStatus;
 }
