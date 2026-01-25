@@ -118,8 +118,12 @@ export const bookingApi = {
     /**
      * Step 3 - Create booking
      */
-    async createBooking(dto: BookingRequestDTO): Promise<BookingResponseDTO> {
-        const res = await api.post<BookingResponseDTO>("/user/bookings", dto)
+    async createBooking(dto: BookingRequestDTO, faceVerifiedToken?: string): Promise<BookingResponseDTO> {
+        const res = await api.post<BookingResponseDTO>("/user/bookings", dto, {
+            headers: faceVerifiedToken
+                ? { "X-Face-Verified": faceVerifiedToken } // hoặc header name đúng theo BE bạn đặt
+                : undefined,
+        })
         return res.data
     },
 

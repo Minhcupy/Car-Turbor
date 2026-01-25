@@ -1,15 +1,16 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import Image from "next/image"
+import Webcam from "react-webcam"
 import { ArrowLeft, Download, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 
-import {
-    bookingApi,
+import api from "@/src/services/user/api"
+import type {
     BookingRequestDTO,
     BookingPreviewDTO,
     BookingResponseDTO,
@@ -17,8 +18,9 @@ import {
 } from "@/src/services/user/apiBookingUserService "
 import { paymentApi, PaymentResponseDTO } from "@/src/services/user/paymentApi"
 import type { Pricing } from "@/src/services/user/pricingApi"
+import { createFaceChallenge, verifyFace } from "@/src/services/user/faceApi"
 
-// Map enum -> nhãn hiển thị
+// ================== Config ==================
 const paymentMethods = [
     { key: "SIMULATED", label: "Thanh toán giả lập (Test)" },
     { key: "CASH", label: "Tiền mặt" },
@@ -27,6 +29,10 @@ const paymentMethods = [
     { key: "CREDIT_CARD", label: "Thẻ tín dụng" },
 ]
 
+const FACE_TOKEN_KEY = "faceVerifiedToken"
+const FACE_HEADER = "X-Face-Verified" // đổi nếu BE dùng header khác
+
+// ================== Types ==================
 interface Step4PaymentProps {
     selectedCar: CarItem
     formData: any
@@ -36,6 +42,7 @@ interface Step4PaymentProps {
     selectedPricing: Pricing | null
 }
 
+// ================== Helpers ==================
 function unitLabel(unit?: string) {
     switch (unit) {
         case "HOUR":
@@ -55,6 +62,41 @@ function money(n: number) {
     return (n ?? 0).toLocaleString("vi-VN")
 }
 
+/** ✅ Resize + nén ảnh webcam -> File jpeg (giảm size, ổn định upload) */
+async function dataUrlToJpegFile(dataUrl: string, filename = "face.jpg") {
+    const img = document.createElement("img")
+    img.src = dataUrl
+
+    await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error("Load image failed"))
+    })
+
+    const maxW = 640
+    const scale = Math.min(1, maxW / img.width)
+    const w = Math.round(img.width * scale)
+    const h = Math.round(img.height * scale)
+
+    const canvas = document.createElement("canvas")
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext("2d")
+    if (!ctx) throw new Error("Canvas context null")
+
+    ctx.drawImage(img, 0, 0, w, h)
+
+    const blob: Blob = await new Promise((resolve, reject) => {
+        canvas.toBlob(
+            (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
+            "image/jpeg",
+            0.85
+        )
+    })
+
+    return new File([blob], filename, { type: "image/jpeg" })
+}
+
+// ================== Component ==================
 export default function Step4Payment({
                                          selectedCar,
                                          formData,
@@ -70,21 +112,36 @@ export default function Step4Payment({
     const [agree, setAgree] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-    // ✅ rentalUnits chuẩn: lấy từ formData (Step2 đã set)
+    // ===== Face Verify State =====
+    const webcamRef = useRef<Webcam>(null)
+    const [challengeId, setChallengeId] = useState<string | null>(null)
+    const [steps, setSteps] = useState<string[]>([])
+    const [facePreview, setFacePreview] = useState<string | null>(null)
+    const [faceToken, setFaceToken] = useState<string | null>(null)
+    const [faceStatus, setFaceStatus] = useState<string>("")
+
+    const faceVerified = !!faceToken
+
+    // load token when refresh
+    useEffect(() => {
+        const saved = sessionStorage.getItem(FACE_TOKEN_KEY)
+        if (saved) setFaceToken(saved)
+    }, [])
+
+    // ===== rentalUnits =====
     const rentalUnits = useMemo(() => {
         const n = Number(formData?.rentalUnits)
         if (!Number.isFinite(n) || n <= 0) return 1
         return Math.floor(n)
     }, [formData?.rentalUnits])
 
-    // ✅ tính tiền theo pricing (không tự tính lại từ thời gian)
+    // ===== calc =====
     const calc = useMemo(() => {
         if (!selectedPricingId || !selectedPricing) return null
         const pricePerUnit = Number(selectedPricing.price ?? 0)
         const total = rentalUnits * pricePerUnit
         const deposit = Math.round(total * 0.3)
         const remain = total - deposit
-
         return {
             unitText: unitLabel(selectedPricing.unit),
             units: rentalUnits,
@@ -95,43 +152,100 @@ export default function Step4Payment({
         }
     }, [selectedPricingId, selectedPricing, rentalUnits])
 
-    // ✅ hiển thị: ưu tiên calc, fallback preview (chỉ fallback tiền, KHÔNG fallback units)
+    // ===== view =====
     const viewTotal = calc?.total ?? preview?.totalAmount ?? 0
-    const viewDeposit =
-        calc?.deposit ?? preview?.depositAmount ?? Math.round(viewTotal * 0.3)
+    const viewDeposit = calc?.deposit ?? preview?.depositAmount ?? Math.round(viewTotal * 0.3)
     const viewRemain = calc?.remain ?? viewTotal - viewDeposit
-
     const viewUnits = rentalUnits
     const viewUnitText = calc?.unitText ?? unitLabel(selectedPricing?.unit) ?? "ngày"
 
+    // ================== Face Actions ==================
+    async function handleFaceChallenge() {
+        try {
+            setErrorMsg(null)
+            setFaceStatus("Đang tạo thử thách...")
+
+            // tạo challenge mới => xoá token cũ + preview cũ
+            setFaceToken(null)
+            sessionStorage.removeItem(FACE_TOKEN_KEY)
+            setFacePreview(null)
+            setChallengeId(null)
+            setSteps([])
+
+            const ch = await createFaceChallenge("CREATE_BOOKING", "")
+            setChallengeId(ch.challengeId)
+            setSteps(ch.steps || [])
+            setFaceStatus("Tạo thử thách thành công ✅")
+        } catch (e: any) {
+            setFaceStatus(e?.response?.data?.message || e.message || "Tạo thử thách lỗi ❌")
+        }
+    }
+
+    function handleFaceCapture() {
+        const imgSrc = webcamRef.current?.getScreenshot()
+        if (!imgSrc) {
+            setFaceStatus("Không chụp được ảnh ❌")
+            return
+        }
+        setFacePreview(imgSrc)
+        setFaceStatus("Chụp ảnh thành công ✅")
+    }
+
+    async function handleFaceVerify() {
+        if (!challengeId) return setFaceStatus("Chưa có challengeId ❌")
+        if (!facePreview) return setFaceStatus("Chưa chụp ảnh ❌")
+
+        try {
+            setFaceStatus("Đang xác minh...")
+
+            const file = await dataUrlToJpegFile(facePreview, "face.jpg")
+            const res = await verifyFace(challengeId, file)
+
+            if (!res.verified || !res.faceVerifiedToken) {
+                setFaceToken(null)
+                sessionStorage.removeItem(FACE_TOKEN_KEY)
+                setFaceStatus("Không khớp khuôn mặt ❌")
+                return
+            }
+
+            setFaceToken(res.faceVerifiedToken)
+            sessionStorage.setItem(FACE_TOKEN_KEY, res.faceVerifiedToken)
+            setFaceStatus("Xác minh thành công ✅")
+        } catch (e: any) {
+            setFaceStatus(e?.response?.data?.message || e.message || "Xác minh lỗi ❌")
+        }
+    }
+
+    function handleResetFace() {
+        setFaceToken(null)
+        setChallengeId(null)
+        setSteps([])
+        setFacePreview(null)
+        sessionStorage.removeItem(FACE_TOKEN_KEY)
+        setFaceStatus("Đã reset.")
+    }
+
+    // ================== Payment Flow ==================
     const handlePayment = async () => {
-        if (!selectedPricingId) {
-            setErrorMsg("Chưa chọn kiểu thuê. Vui lòng quay lại bước 1 để chọn kiểu thuê.")
-            return
-        }
-
-        // preview có thể không bắt buộc nếu bạn đã tính calc đầy đủ,
-        // nhưng nếu flow bạn cần preview thì giữ check này:
-        if (!preview && !calc) {
-            setErrorMsg("Thiếu dữ liệu tạm tính. Vui lòng quay lại bước 2.")
-            return
-        }
-
+        if (!selectedPricingId) return setErrorMsg("Chưa chọn kiểu thuê. Vui lòng quay lại bước 1.")
+        if (!preview && !calc) return setErrorMsg("Thiếu dữ liệu tạm tính. Vui lòng quay lại bước 2.")
         if (!formData?.pickupDate || !formData?.pickupTime || !formData?.returnDate || !formData?.returnTime) {
-            setErrorMsg("Thiếu ngày/giờ nhận-trả. Vui lòng quay lại bước 2.")
-            return
+            return setErrorMsg("Thiếu ngày/giờ nhận-trả. Vui lòng quay lại bước 2.")
         }
+
+        // ✅ bắt buộc xác minh khuôn mặt trước
+        const token = faceToken || sessionStorage.getItem(FACE_TOKEN_KEY)
+        if (!token) return setErrorMsg("Bạn phải xác minh khuôn mặt trước khi thanh toán.")
 
         setLoading(true)
         setErrorMsg(null)
 
         try {
-            // 1) Tạo booking (✅ gửi pricingId + rentalUnits chuẩn)
+            // 1) Create booking + header face token
             const dto: BookingRequestDTO = {
                 carId: selectedCar.carId,
-
                 pricingId: selectedPricingId,
-                rentalUnits: rentalUnits,
+                rentalUnits,
 
                 pickupLocation: formData.pickupLocation || "",
                 returnLocation: formData.returnLocation || "",
@@ -149,10 +263,13 @@ export default function Step4Payment({
                 licenseNumber: formData.licenseNumber || "",
             } as any
 
-            const bookingRes = await bookingApi.createBooking(dto)
+            const bookingRes = (
+                await api.post("/user/bookings", dto, { headers: { [FACE_HEADER]: token } })
+            ).data as BookingResponseDTO
+
             setBooking(bookingRes)
 
-            // 2) Tạo payment
+            // 2) Create payment
             const paymentCreated = await paymentApi.createPayment(
                 bookingRes.bookingId,
                 {
@@ -163,11 +280,9 @@ export default function Step4Payment({
                 paymentMethod
             )
 
-            if (!paymentCreated?.paymentId) {
-                throw new Error("Không nhận được paymentId từ server")
-            }
+            if (!paymentCreated?.paymentId) throw new Error("Không nhận được paymentId từ server")
 
-            // 3) Giả lập thanh toán
+            // 3) Simulate pay
             const payRes = await paymentApi.simulatePay(paymentCreated.paymentId)
             setPayment(payRes)
         } catch (err: any) {
@@ -216,7 +331,6 @@ export default function Step4Payment({
                             </div>
                         </div>
 
-                        {/* mô tả theo kiểu thuê */}
                         <p className="mt-3 text-sm text-gray-600">
                             Thời lượng thuê: <b>{viewUnits}</b> {viewUnitText}
                             {selectedPricing ? (
@@ -231,6 +345,137 @@ export default function Step4Payment({
                             <p className="mt-2 text-sm text-red-600">
                                 Chưa có kiểu thuê. Vui lòng quay lại bước 1 để chọn kiểu thuê.
                             </p>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Face Verify */}
+                <Card className="border-sky-100 shadow-lg">
+                    <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                        <div className="space-y-0.5">
+                            <CardTitle className="text-gray-800">Xác minh khuôn mặt</CardTitle>
+                            <p className="text-sm text-gray-500">
+                                Bắt đầu xác minh, chụp ảnh rõ mặt, sau đó bấm xác minh để tiếp tục thanh toán.
+                            </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <span
+                              className={`text-sm font-semibold px-2 py-1 rounded-md border ${
+                                  faceVerified
+                                      ? "text-green-700 border-green-200 bg-green-50"
+                                      : "text-red-700 border-red-200 bg-red-50"
+                              }`}
+                          >
+                            {faceVerified ? "Đã xác minh ✅" : "Chưa xác minh ❌"}
+                          </span>
+
+                            <Button type="button" variant="outline" onClick={handleResetFace}>
+                                Reset
+                            </Button>
+                        </div>
+                    </CardHeader>
+
+                    <CardContent className="space-y-4">
+                        {/* Actions */}
+                        <div className="flex flex-wrap gap-2">
+                            <Button
+                                type="button"
+                                className="bg-sky-600 hover:bg-sky-700 text-white"
+                                onClick={handleFaceChallenge}
+                            >
+                                Bắt đầu xác minh
+                            </Button>
+
+                            <Button
+                                type="button"
+                                variant="outline"
+                                onClick={handleFaceCapture}
+                                disabled={!challengeId}
+                                title={!challengeId ? "Hãy bấm 'Bắt đầu xác minh' trước" : undefined}
+                            >
+                                Chụp ảnh
+                            </Button>
+
+                            <Button
+                                type="button"
+                                onClick={handleFaceVerify}
+                                disabled={!challengeId || !facePreview}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                                title={
+                                    !challengeId
+                                        ? "Hãy bấm 'Bắt đầu xác minh' trước"
+                                        : !facePreview
+                                            ? "Hãy chụp ảnh trước"
+                                            : undefined
+                                }
+                            >
+                                Xác minh
+                            </Button>
+                        </div>
+
+                        {/* Steps + Status (ẩn challengeId) */}
+                        <div className="text-sm text-gray-700 space-y-1">
+                            <div>
+                                <b>Bước:</b>{" "}
+                                {steps.length ? (
+                                    <span className="text-gray-700">{steps.join(", ")}</span>
+                                ) : (
+                                    <span className="text-gray-400">-</span>
+                                )}
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <b>Trạng thái:</b>
+                                <span className={`${faceVerified ? "text-green-700" : "text-gray-600"}`}>
+                                  {faceStatus || "-"}
+                                </span>
+                            </div>
+                        </div>
+
+                        {/* Camera + Preview */}
+                        <div className="grid md:grid-cols-2 gap-4">
+                            <div className="rounded-xl border bg-white p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-sm font-semibold text-gray-800">Camera</p>
+                                    <span className="text-xs text-gray-500">*đủ sáng, nhìn thẳng</span>
+                                </div>
+
+                                <div className="overflow-hidden rounded-xl bg-black aspect-video">
+                                    <Webcam
+                                        ref={webcamRef}
+                                        screenshotFormat="image/jpeg"
+                                        screenshotQuality={0.9}
+                                        videoConstraints={{ facingMode: "user", width: 640, height: 480 }}
+                                        className="w-full h-full object-cover"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="rounded-xl border bg-white p-3">
+                                <div className="flex items-center justify-between mb-2">
+                                    <p className="text-sm font-semibold text-gray-800">Ảnh đã chụp</p>
+                                    {facePreview ? (
+                                        <span className="text-xs text-green-700">Đã có ảnh ✅</span>
+                                    ) : (
+                                        <span className="text-xs text-gray-500">Chưa có ảnh</span>
+                                    )}
+                                </div>
+
+                                <div className="overflow-hidden rounded-xl bg-gray-100 aspect-video flex items-center justify-center">
+                                    {facePreview ? (
+                                        <img src={facePreview} alt="face-preview" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <span className="text-sm text-gray-500">Chụp ảnh để xem preview</span>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        {!faceVerified && (
+                            <div className="text-sm text-red-600">
+                                Bạn cần xác minh khuôn mặt trước khi có thể thanh toán.
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -288,7 +533,7 @@ export default function Step4Payment({
                     <Card className="border-red-200 bg-red-50">
                         <CardHeader className="flex flex-row items-center gap-2">
                             <AlertCircle className="h-5 w-5 text-red-600" />
-                            <CardTitle className="text-red-700">Lỗi Thanh Toán</CardTitle>
+                            <CardTitle className="text-red-700">Lỗi</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="text-red-700">{errorMsg}</p>
@@ -341,11 +586,20 @@ export default function Step4Payment({
                         <Button onClick={prevStep} variant="outline" className="border-sky-200">
                             <ArrowLeft className="h-4 w-4 mr-2" /> Quay lại
                         </Button>
+
                         <Button
                             onClick={handlePayment}
-                            disabled={!agree || !selectedPricingId}
+                            disabled={!agree || !selectedPricingId || !faceVerified}
                             className="bg-sky-500 hover:bg-sky-600 text-white"
-                            title={!selectedPricingId ? "Chưa chọn kiểu thuê" : undefined}
+                            title={
+                                !selectedPricingId
+                                    ? "Chưa chọn kiểu thuê"
+                                    : !agree
+                                        ? "Bạn chưa đồng ý điều khoản"
+                                        : !faceVerified
+                                            ? "Bạn chưa xác minh khuôn mặt"
+                                            : undefined
+                            }
                         >
                             Thanh toán ({paymentMethod})
                         </Button>
@@ -414,6 +668,12 @@ export default function Step4Payment({
                         {!selectedPricingId && (
                             <p className="text-sm text-red-600">
                                 Chưa có kiểu thuê. Vui lòng quay lại bước 1 để chọn kiểu thuê.
+                            </p>
+                        )}
+
+                        {!faceVerified && (
+                            <p className="text-sm text-red-600">
+                                Chưa xác minh khuôn mặt — không thể thanh toán.
                             </p>
                         )}
                     </CardContent>
