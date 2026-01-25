@@ -3,6 +3,7 @@ package com.example.autostore.util;
 import com.example.autostore.service.UserDetailsImpl;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
@@ -109,5 +110,10 @@ public class JwtUtil {
             log.error("Invalid JWT token: {}", e.getMessage());
         }
         return false;
+    }
+
+    @PostConstruct
+    public void init() {
+        log.info("JWT secret length = {}", jwtSecret != null ? jwtSecret.length() : -1);
     }
 }

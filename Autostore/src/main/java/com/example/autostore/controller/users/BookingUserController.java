@@ -2,15 +2,22 @@ package com.example.autostore.controller.users;
 
 
 import com.example.autostore.dto.user.*;
+import com.example.autostore.model.UserFaceTemplate;
+import com.example.autostore.provider.CustomUserPrincipal;
+import com.example.autostore.provider.RequireFace;
 import com.example.autostore.service.user.implement.BookingUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/user/bookings")
@@ -26,6 +33,7 @@ public class BookingUserController {
 
 
     @PostMapping
+    @RequireFace(action = "CREATE_BOOKING")
     public ResponseEntity<BookingResponseDTO> createBooking(
             @RequestBody BookingRequestDTO request,
             Authentication authentication) {
@@ -52,4 +60,5 @@ public class BookingUserController {
     ) {
         return bookingService.checkAvailability(carId, startDT, endDT);
     }
+
 }

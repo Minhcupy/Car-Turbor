@@ -35,6 +35,13 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
                                     FilterChain filterChain) throws ServletException, IOException {
+        String path = request.getServletPath();
+        String header = request.getHeader("Authorization");
+        log.info("[JWT] path={} headerAuthPresent={} headerAuthStartsBearer={}",
+                path,
+                header != null,
+                header != null && header.startsWith("Bearer "));
+
         try {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtil.validateToken(jwt)) {
@@ -51,6 +58,13 @@ public class AuthTokenFilter extends OncePerRequestFilter {
 
                 // Đặt user vào SecurityContext
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                log.info("[JWT] afterSetAuth isAuthenticated={} principalType={} authorities={}",
+                        SecurityContextHolder.getContext().getAuthentication() != null
+                                && SecurityContextHolder.getContext().getAuthentication().isAuthenticated(),
+                        SecurityContextHolder.getContext().getAuthentication() != null
+                                ? SecurityContextHolder.getContext().getAuthentication().getPrincipal().getClass().getName()
+                                : "null",
+                        userDetails.getAuthorities());
             }
         } catch (Exception e) {
             log.error("Cannot set user authentication: {}", e.getMessage());
