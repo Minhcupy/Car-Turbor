@@ -5,7 +5,7 @@ import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class FaceVerifyResponse {
-    private boolean verified;
-    private String faceVerifiedToken; // null nếu fail
+public class FaceEnrolledResponse {
+    private boolean registered;
+    private long userId;
 }

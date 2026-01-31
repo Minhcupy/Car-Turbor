@@ -1,3 +1,9 @@
 package com.example.autostore.dto.user;
 
-public record FaceChallengeRequest(String action, String resourceId) {}
+import lombok.Data;
+
+@Data
+public class FaceChallengeRequest {
+    private String action;
+    private String resourceId; // optional
+}
