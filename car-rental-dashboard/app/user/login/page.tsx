@@ -13,7 +13,7 @@ import { useRouter } from "next/navigation"
 // Services
 import { login } from "@/src/services/user/auth"
 import { setTokens } from "@/src/services/user/token"
-import { checkFaceEnrolled } from "@/src/services/user/faceApi" // ✅ thêm dòng này
+import { checkFaceEnrolled } from "@/src/services/user/faceApi"
 
 interface LoginForm {
   userName: string
@@ -32,64 +32,68 @@ export default function LoginPage() {
 
   const validateForm = () => {
     const newErrors: typeof errors = {}
-    if (!formData.userName.trim()) {
-      newErrors.userName = "Tên đăng nhập không được để trống"
-    } else if (formData.userName.length < 4) {
-      newErrors.userName = "Tên đăng nhập phải ít nhất 4 ký tự"
-    }
+    if (!formData.userName.trim()) newErrors.userName = "Tên đăng nhập không được để trống"
+    else if (formData.userName.length < 4) newErrors.userName = "Tên đăng nhập phải ít nhất 4 ký tự"
 
-    if (!formData.password.trim()) {
-      newErrors.password = "Mật khẩu không được để trống"
-    } else if (formData.password.length < 6) {
-      newErrors.password = "Mật khẩu phải ít nhất 6 ký tự"
-    }
+    if (!formData.password.trim()) newErrors.password = "Mật khẩu không được để trống"
+    else if (formData.password.length < 6) newErrors.password = "Mật khẩu phải ít nhất 6 ký tự"
 
     return newErrors
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
     const newErrors = validateForm()
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors)
       return
     }
+
     setErrors({})
     setLoading(true)
 
     try {
+      // 1) Login
       const res = await login(formData.userName, formData.password)
-      console.log("Login response:", res)
-
       const { accessToken, refreshToken, roles, userName, id } = res
-      setTokens(accessToken, refreshToken)
-      localStorage.setItem("userId", String(id))
 
-      const role = roles && roles.length > 0 ? roles[0].replace("ROLE_", "") : null
-      localStorage.setItem("userRole", role || "")
+      // 2) Save tokens BEFORE calling any protected API
+      setTokens(accessToken, refreshToken)
+
+      localStorage.setItem("userId", String(id))
+      const role = roles && roles.length > 0 ? roles[0].replace("ROLE_", "") : ""
+      localStorage.setItem("userRole", role)
       localStorage.setItem("userName", userName || "")
 
       setErrors({ success: "Đăng nhập thành công! Đang chuyển hướng..." })
 
-      // ✅ redirect theo role + check face
-      setTimeout(async () => {
-        if (role === "ADMIN") {
-          router.replace("/admin")
-          return
-        }
+      // 3) Redirect by role
+      if (role === "ADMIN") {
+        router.replace("/admin")
+        return
+      }
 
-        try {
-          const { registered } = await checkFaceEnrolled()
-          if (!registered) {
-            router.replace("/user/face-register") // ✅ trang đăng ký khuôn mặt
-          } else {
-            router.replace("/user") // ✅ đã có khuôn mặt -> home
-          }
-        } catch (err) {
-          // fallback nếu lỗi call API
-          router.replace("/user")
-        }
-      }, 600)
+      // 4) Check face enrolled (must succeed with token)
+      try {
+        const resp = await checkFaceEnrolled()
+
+        // nếu backend trả {registered: boolean}
+        const registered = (resp as any)?.registered
+
+        // nếu backend trả {enrolled: boolean} (phòng trường hợp sai field)
+        const enrolled = (resp as any)?.enrolled
+
+        const ok = typeof registered === "boolean" ? registered : !!enrolled
+
+        if (!ok) router.replace("/user/face-register")
+        else router.replace("/user")
+      } catch (err: any) {
+        // Quan trọng: nếu check bị 401/403 -> đừng âm thầm đá về /user, hãy cho biết để debug
+        console.log("checkFaceEnrolled error:", err?.response?.status, err?.response?.data || err?.message)
+        // fallback: cho vào trang đăng ký face luôn để user không bị kẹt
+        router.replace("/user/face-register")
+      }
     } catch (error: any) {
       setErrors({ general: error?.message || "Tên đăng nhập hoặc mật khẩu không đúng" })
     } finally {
@@ -98,19 +102,16 @@ export default function LoginPage() {
   }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
+    setFormData((prev) => ({
+      ...prev,
       [e.target.name]: e.target.value,
-    })
+    }))
   }
 
   return (
       <div className="min-h-screen bg-gradient-to-br from-sky-50 to-white flex items-center justify-center p-4">
         <div className="w-full max-w-md">
-          <Link
-              href="/user"
-              className="inline-flex items-center text-sky-600 hover:text-sky-700 mb-6 transition-colors"
-          >
+          <Link href="/user" className="inline-flex items-center text-sky-600 hover:text-sky-700 mb-6 transition-colors">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Về trang chủ
           </Link>
@@ -156,7 +157,7 @@ export default function LoginPage() {
                     />
                     <button
                         type="button"
-                        onClick={() => setShowPassword(!showPassword)}
+                        onClick={() => setShowPassword((s) => !s)}
                         className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                     >
                       {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
