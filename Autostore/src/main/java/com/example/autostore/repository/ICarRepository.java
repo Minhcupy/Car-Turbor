@@ -27,15 +27,15 @@ public interface ICarRepository extends JpaRepository<Car, Integer> {
     long countByStatus(CarStatus status);
 
     @Query(value = """
-        SELECT LOWER(br.brandName) AS brandName,
-               COUNT(c.carId) AS carCount
-        FROM Car c
-        JOIN Brand br ON br.brandId = c.brandId
-        JOIN CarType ct ON ct.carTypeId = c.carTypeId
-        WHERE (:CarType IS NULL OR LOWER(ct.typeName) = LOWER(:carType))
-        GROUP BY LOWER(br.brandName)
-        ORDER BY brandName
-        """, nativeQuery = true)
+    SELECT LOWER(br.brand_name) AS brandName,
+           COUNT(c.car_id) AS carCount
+    FROM car c
+    JOIN brand br ON br.brand_id = c.brand_id
+    JOIN car_type ct ON ct.car_type_id = c.car_type_id
+    WHERE (:carType IS NULL OR LOWER(ct.type_name) = LOWER(:carType))
+    GROUP BY LOWER(br.brand_name)
+    ORDER BY brandName
+""", nativeQuery = true)
     List<Object[]> getBrandRatio(@Param("carType") String carType);
 
     @Query("SELECT c FROM Car c WHERE c.isFeatured = true AND c.status = 'AVAILABLE'")

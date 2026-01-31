@@ -39,27 +39,27 @@ public interface IBookingRepository extends JpaRepository<Booking, Integer> {
             String customerName, String carName, Pageable pageable
     );
     @Query(value = """
-        WITH RECURSIVE date_series AS (
-            SELECT :startDate AS dayKey
-            UNION ALL
-            SELECT DATE_ADD(dayKey, INTERVAL 1 DAY)
-            FROM date_series
-            WHERE dayKey < :endDate
-        )
-        SELECT ds.dayKey,
-               COALESCE(COUNT(b.bookingId), 0) AS bookingCount
-        FROM date_series ds
-        LEFT JOIN Booking b
-               ON DATE(b.createdAt) = ds.dayKey
-              AND b.status = 'CONFIRMED'
-        LEFT JOIN Car c ON b.carId = c.carId
-        LEFT JOIN Brand br ON c.brandId = br.brandId
-        LEFT JOIN CarType ct ON c.carTypeId = ct.carTypeId
-        WHERE (:Brand IS NULL OR LOWER(br.brandName) = LOWER(:brand))
-          AND (:CarType IS NULL OR LOWER(ct.typeName) = LOWER(:carType))
-        GROUP BY ds.dayKey
-        ORDER BY ds.dayKey
-        """, nativeQuery = true)
+    WITH RECURSIVE date_series AS (
+        SELECT DATE(:startDate) AS dayKey
+        UNION ALL
+        SELECT DATE_ADD(dayKey, INTERVAL 1 DAY)
+        FROM date_series
+        WHERE dayKey < DATE(:endDate)
+    )
+    SELECT ds.dayKey,
+           COALESCE(COUNT(b.booking_id), 0) AS bookingCount
+    FROM date_series ds
+    LEFT JOIN booking b
+           ON DATE(b.created_at) = ds.dayKey
+          AND b.status = 'CONFIRMED'
+    LEFT JOIN car c ON b.car_id = c.car_id
+    LEFT JOIN brand br ON c.brand_id = br.brand_id
+    LEFT JOIN car_type ct ON c.car_type_id = ct.car_type_id
+    WHERE (:brand IS NULL OR LOWER(br.brand_name) = LOWER(:brand))
+      AND (:carType IS NULL OR LOWER(ct.type_name) = LOWER(:carType))
+    GROUP BY ds.dayKey
+    ORDER BY ds.dayKey
+""", nativeQuery = true)
     List<Object[]> getDailyBookingsWithZeros(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,

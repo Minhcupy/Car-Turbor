@@ -3,8 +3,11 @@ package com.example.autostore.controller.admin;
 import com.example.autostore.dto.admin.*;
 import com.example.autostore.service.admin.implement.DashboardAdminService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -56,4 +59,17 @@ public class DashboardController {
 //    public List<RecentCustomerDTO> getRecentCustomers() {
 //        return dashboardService.getRecentCustomers();
 //    }
+
+    @GetMapping("/report")
+    public DashboardReportDTO getReport(
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String carType,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        if ("all".equalsIgnoreCase(brand)) brand = null;
+        if ("all".equalsIgnoreCase(carType)) carType = null;
+
+        return dashboardService.getDashboardReport(startDate, endDate, brand, carType);
+    }
 }

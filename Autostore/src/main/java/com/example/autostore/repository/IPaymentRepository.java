@@ -30,22 +30,22 @@ public interface IPaymentRepository extends JpaRepository<Payment, Integer> {
             Pageable pageable
     );
 
-    @Query(value = """
-        SELECT DATE_FORMAT(p.paymentDate, '%Y-%m') AS monthKey,
-               COALESCE(SUM(p.amount), 0) AS revenue
+    @Query("""
+        SELECT FUNCTION('DATE_FORMAT', p.paymentDate, '%Y-%m') AS monthKey,
+               COALESCE(SUM(p.amount), 0)
         FROM Payment p
-        JOIN Booking b ON b.bookingId = p.bookingId
-        JOIN Car c ON c.carId = b.carId
-        JOIN Brand br ON br.brandId = c.brandId
-        JOIN CarType ct ON ct.carTypeId = c.carTypeId
-        WHERE p.status = 'SUCCESS'
-          AND b.status = 'CONFIRMED'
+        JOIN p.booking b
+        JOIN b.car c
+        JOIN c.brand br
+        JOIN c.carType ct
+        WHERE p.status = com.example.autostore.Enum.PaymentStatus.SUCCESS
+          AND b.status = com.example.autostore.Enum.BookingStatus.CONFIRMED
           AND p.paymentDate BETWEEN :startDate AND :endDate
           AND (:brand IS NULL OR LOWER(br.brandName) = LOWER(:brand))
           AND (:carType IS NULL OR LOWER(ct.typeName) = LOWER(:carType))
-        GROUP BY monthKey
-        ORDER BY monthKey
-        """, nativeQuery = true)
+        GROUP BY FUNCTION('DATE_FORMAT', p.paymentDate, '%Y-%m')
+        ORDER BY FUNCTION('DATE_FORMAT', p.paymentDate, '%Y-%m')
+    """)
     List<Object[]> getMonthlyRevenue(
             @Param("startDate") LocalDateTime startDate,
             @Param("endDate") LocalDateTime endDate,
