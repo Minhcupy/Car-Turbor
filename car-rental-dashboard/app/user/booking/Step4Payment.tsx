@@ -15,14 +15,14 @@ import type {
     BookingPreviewDTO,
     BookingResponseDTO,
     CarItem,
-} from "@/src/services/user/apiBookingUserService " // ✅ bỏ dấu cách cuối
+} from "@/src/services/user/apiBookingUserService " // ✅ FIX: bỏ dấu cách cuối
 import { paymentApi, type PaymentResponseDTO } from "@/src/services/user/paymentApi"
 import type { Pricing } from "@/src/services/user/pricingApi"
-import { createFaceChallenge, verifyFace } from "@/src/services/user/faceApi"
+import { createFaceChallenge, verifyFaceVideo } from "@/src/services/user/faceApi"
 import {
     signElectronic,
     signDigital,
-    downloadContractPdf, // ✅ dùng blob
+    downloadContractPdf,
     type ContractDTO,
 } from "@/src/services/user/contractApi"
 
@@ -70,42 +70,21 @@ function money(n: number) {
     return (n ?? 0).toLocaleString("vi-VN")
 }
 
-/** Resize + nén ảnh webcam -> File jpeg */
-async function dataUrlToJpegFile(dataUrl: string, filename = "face.jpg") {
-    const img = document.createElement("img")
-    img.src = dataUrl
-
-    await new Promise<void>((resolve, reject) => {
-        img.onload = () => resolve()
-        img.onerror = () => reject(new Error("Load image failed"))
-    })
-
-    const maxW = 640
-    const scale = Math.min(1, maxW / img.width)
-    const w = Math.round(img.width * scale)
-    const h = Math.round(img.height * scale)
-
-    const canvas = document.createElement("canvas")
-    canvas.width = w
-    canvas.height = h
-    const ctx = canvas.getContext("2d")
-    if (!ctx) throw new Error("Canvas context null")
-
-    ctx.drawImage(img, 0, 0, w, h)
-
-    const blob: Blob = await new Promise((resolve, reject) => {
-        canvas.toBlob(
-            (b) => (b ? resolve(b) : reject(new Error("toBlob failed"))),
-            "image/jpeg",
-            0.85
-        )
-    })
-
-    return new File([blob], filename, { type: "image/jpeg" })
-}
-
 function isValidContractStatus(x: any): x is ContractDTO["status"] {
     return x === "DRAFT" || x === "SIGNED_ELECTRONIC" || x === "SIGNED_DIGITAL" || x === "VOID"
+}
+
+function pickRecorderMimeType() {
+    // ưu tiên vp8 (ổn định & phổ biến), rồi webm thường
+    const candidates = [
+        "video/webm;codecs=vp8",
+        "video/webm;codecs=vp9",
+        "video/webm",
+    ]
+    for (const t of candidates) {
+        if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported?.(t)) return t
+    }
+    return "" // để browser tự chọn
 }
 
 // ================== Component ==================
@@ -124,11 +103,19 @@ export default function Step4Payment({
     const [agree, setAgree] = useState(false)
     const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-    // ===== Face Verify State =====
+    // ===== Face Verify State (VIDEO) =====
     const webcamRef = useRef<Webcam>(null)
+    const recorderRef = useRef<MediaRecorder | null>(null)
+    const chunksRef = useRef<BlobPart[]>([])
+    const stopTimerRef = useRef<number | null>(null)
+    const faceVideoUrlRef = useRef<string>("")
+
     const [challengeId, setChallengeId] = useState<string | null>(null)
     const [steps, setSteps] = useState<string[]>([])
-    const [facePreview, setFacePreview] = useState<string | null>(null)
+    const [faceVideoBlob, setFaceVideoBlob] = useState<Blob | null>(null)
+    const [faceVideoUrl, setFaceVideoUrl] = useState<string>("")
+    const [recording, setRecording] = useState(false)
+
     const [faceToken, setFaceToken] = useState<string | null>(null)
     const [faceStatus, setFaceStatus] = useState<string>("")
     const faceVerified = !!faceToken
@@ -155,6 +142,24 @@ export default function Step4Payment({
         if (saved) setFaceToken(saved)
     }, [])
 
+    // cleanup on unmount
+    useEffect(() => {
+        return () => {
+            try {
+                if (stopTimerRef.current) window.clearTimeout(stopTimerRef.current)
+                stopTimerRef.current = null
+                if (recorderRef.current && recorderRef.current.state !== "inactive") {
+                    recorderRef.current.stop()
+                }
+            } catch {}
+
+            if (faceVideoUrlRef.current) {
+                URL.revokeObjectURL(faceVideoUrlRef.current)
+                faceVideoUrlRef.current = ""
+            }
+        }
+    }, [])
+
     // ===== rentalUnits =====
     const rentalUnits = useMemo(() => {
         const n = Number(formData?.rentalUnits)
@@ -179,7 +184,7 @@ export default function Step4Payment({
     const viewUnits = rentalUnits
     const viewUnitText = calc?.unitText ?? unitLabel(selectedPricing?.unit) ?? "ngày"
 
-    // ================== Face Actions ==================
+    // ================== Face Actions (VIDEO) ==================
     async function handleFaceChallenge() {
         try {
             setErrorMsg(null)
@@ -187,9 +192,16 @@ export default function Step4Payment({
 
             setFaceToken(null)
             sessionStorage.removeItem(FACE_TOKEN_KEY)
-            setFacePreview(null)
+
             setChallengeId(null)
             setSteps([])
+
+            setFaceVideoBlob(null)
+            if (faceVideoUrlRef.current) {
+                URL.revokeObjectURL(faceVideoUrlRef.current)
+                faceVideoUrlRef.current = ""
+            }
+            setFaceVideoUrl("")
 
             const ch = await createFaceChallenge("CREATE_BOOKING", "")
             setChallengeId(ch.challengeId)
@@ -200,26 +212,104 @@ export default function Step4Payment({
         }
     }
 
-    function handleFaceCapture() {
-        const imgSrc = webcamRef.current?.getScreenshot()
-        if (!imgSrc) return setFaceStatus("Không chụp được ảnh ❌")
-        setFacePreview(imgSrc)
-        setFaceStatus("Chụp ảnh thành công ✅")
+    function stopRecordInternal() {
+        try {
+            const rec = recorderRef.current
+            if (rec && rec.state !== "inactive") rec.stop()
+        } catch {}
     }
 
-    async function handleFaceVerify() {
+    function startRecord3s() {
+        if (!challengeId) return setFaceStatus("Hãy bấm 'Bắt đầu xác minh' trước ❌")
+        if (recording) return
+
+        setErrorMsg(null)
+        setFaceStatus("")
+
+        // reset clip cũ
+        setFaceVideoBlob(null)
+        if (faceVideoUrlRef.current) {
+            URL.revokeObjectURL(faceVideoUrlRef.current)
+            faceVideoUrlRef.current = ""
+        }
+        setFaceVideoUrl("")
+        chunksRef.current = []
+
+        const stream = (webcamRef.current?.stream as MediaStream | undefined) || undefined
+        if (!stream) return setFaceStatus("Không lấy được stream webcam ❌")
+
+        const mimeType = pickRecorderMimeType()
+
+        let rec: MediaRecorder
+        try {
+            rec = mimeType
+                ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 1_000_000 })
+                : new MediaRecorder(stream, { videoBitsPerSecond: 1_000_000 })
+        } catch (err) {
+            console.error(err)
+            return setFaceStatus("Trình duyệt không hỗ trợ MediaRecorder ❌")
+        }
+
+        recorderRef.current = rec
+
+        rec.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) chunksRef.current.push(e.data)
+        }
+
+        rec.onerror = () => {
+            setRecording(false)
+            setFaceStatus("Quay video lỗi ❌")
+        }
+
+        rec.onstop = () => {
+            try {
+                const blob = new Blob(chunksRef.current, { type: mimeType || "video/webm" })
+                setFaceVideoBlob(blob)
+
+                const url = URL.createObjectURL(blob)
+                faceVideoUrlRef.current = url
+                setFaceVideoUrl(url)
+
+                setFaceStatus("Quay video thành công ✅")
+            } finally {
+                setRecording(false)
+                chunksRef.current = []
+                recorderRef.current = null
+            }
+        }
+
+        // start + timeslice để chunk đều
+        rec.start(250)
+        setRecording(true)
+        setFaceStatus("Đang quay 3 giây...")
+
+        if (stopTimerRef.current) window.clearTimeout(stopTimerRef.current)
+        stopTimerRef.current = window.setTimeout(() => {
+            stopTimerRef.current = null
+            stopRecordInternal()
+        }, 3000)
+    }
+
+    function stopRecord() {
+        if (stopTimerRef.current) window.clearTimeout(stopTimerRef.current)
+        stopTimerRef.current = null
+        stopRecordInternal()
+    }
+
+    async function handleFaceVerifyVideo() {
         if (!challengeId) return setFaceStatus("Chưa có challengeId ❌")
-        if (!facePreview) return setFaceStatus("Chưa chụp ảnh ❌")
+        if (!faceVideoBlob) return setFaceStatus("Chưa có video ❌")
 
         try {
-            setFaceStatus("Đang xác minh...")
-            const file = await dataUrlToJpegFile(facePreview, "face.jpg")
-            const res = await verifyFace(challengeId, file)
+            setFaceStatus("Đang xác minh video...")
+
+            const file = new File([faceVideoBlob], "face.webm", { type: faceVideoBlob.type || "video/webm" })
+            const res = await verifyFaceVideo(challengeId, file)
 
             if (!res.verified || !res.faceVerifiedToken) {
                 setFaceToken(null)
                 sessionStorage.removeItem(FACE_TOKEN_KEY)
-                return setFaceStatus("Không khớp khuôn mặt ❌")
+                return setFaceStatus("Không khớp / không đạt liveness ❌")
             }
 
             setFaceToken(res.faceVerifiedToken)
@@ -234,12 +324,19 @@ export default function Step4Payment({
         setFaceToken(null)
         setChallengeId(null)
         setSteps([])
-        setFacePreview(null)
+        setFaceVideoBlob(null)
+
+        if (faceVideoUrlRef.current) {
+            URL.revokeObjectURL(faceVideoUrlRef.current)
+            faceVideoUrlRef.current = ""
+        }
+        setFaceVideoUrl("")
+
         sessionStorage.removeItem(FACE_TOKEN_KEY)
         setFaceStatus("Đã reset.")
     }
 
-    // ================== Signature Canvas ==================
+    // ================== Signature Canvas (GIỮ NGUYÊN LOGIC CŨ) ==================
     function initSigCanvas() {
         const canvas = sigCanvasRef.current
         if (!canvas) return
@@ -329,17 +426,14 @@ export default function Step4Payment({
         return attachDrawHandlers(canvas)
     }, [showContractStep])
 
-    // ✅ chọn loại pdf hiện tại
     const currentPdfType: "unsigned" | "electronic" | "digital" =
         signedDigital ? "digital" : signedElectronic ? "electronic" : "unsigned"
 
-    // ✅ Load PDF bằng axios -> blobUrl (fix iframe không có JWT)
     useEffect(() => {
         if (!contractId || !showContractStep) return
 
         let cancelled = false
         let revoke: string | null = null
-
         const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 
         async function loadPdf() {
@@ -368,8 +462,7 @@ export default function Step4Payment({
                         e?.message ||
                         "Không tải được PDF hợp đồng"
 
-                    const shouldRetry =
-                        typeof msg === "string" && msg.toLowerCase().includes("chưa sẵn sàng")
+                    const shouldRetry = typeof msg === "string" && msg.toLowerCase().includes("chưa sẵn sàng")
 
                     if (!shouldRetry || i === maxTry) {
                         setPdfLoading(false)
@@ -412,7 +505,6 @@ export default function Step4Payment({
             setContractStatus(contract.status)
             setSignedElectronic(true)
             setSignedDigital(contract.status === "SIGNED_DIGITAL")
-            // PDF sẽ auto reload vì currentPdfType đổi sang electronic
         } catch (e: any) {
             setErrorMsg(e?.response?.data?.message || e.message || "Ký hợp đồng lỗi")
         } finally {
@@ -429,7 +521,6 @@ export default function Step4Payment({
             const contract = await signDigital(contractId)
             setContractStatus(contract.status)
             setSignedDigital(true)
-            // PDF sẽ auto reload vì currentPdfType đổi sang digital
         } catch (e: any) {
             setErrorMsg(e?.response?.data?.message || e.message || "Ký số lỗi")
         } finally {
@@ -487,7 +578,6 @@ export default function Step4Payment({
         setErrorMsg(null)
 
         try {
-            // reset contract states for new booking
             setContractId(null)
             setContractStatus("")
             setSignedElectronic(false)
@@ -515,8 +605,9 @@ export default function Step4Payment({
                 licenseNumber: formData.licenseNumber || "",
             }
 
-            const bookingRes = (await api.post<BookingResponseDTO>("/user/bookings", dto, { headers: { [FACE_HEADER]: token } }))
-                .data
+            const bookingRes = (
+                await api.post<BookingResponseDTO>("/user/bookings", dto, { headers: { [FACE_HEADER]: token } })
+            ).data
 
             setBooking(bookingRes)
 
@@ -590,13 +681,13 @@ export default function Step4Payment({
                     </CardContent>
                 </Card>
 
-                {/* Face Verify */}
+                {/* Face Verify (VIDEO) */}
                 <Card className="border-sky-100 shadow-lg">
                     <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
                         <div className="space-y-0.5">
-                            <CardTitle className="text-gray-800">Xác minh khuôn mặt</CardTitle>
+                            <CardTitle className="text-gray-800">Xác minh khuôn mặt (Video)</CardTitle>
                             <p className="text-sm text-gray-500">
-                                Bắt đầu xác minh, chụp ảnh rõ mặt, sau đó bấm xác minh để tiếp tục thanh toán.
+                                Bắt đầu xác minh → quay webcam 3 giây (nhìn thẳng, đủ sáng) → bấm xác minh.
                             </p>
                         </div>
 
@@ -619,38 +710,55 @@ export default function Step4Payment({
 
                     <CardContent className="space-y-4">
                         <div className="flex flex-wrap gap-2">
-                            <Button type="button" className="bg-sky-600 hover:bg-sky-700 text-white" onClick={handleFaceChallenge}>
+                            <Button
+                                type="button"
+                                className="bg-sky-600 hover:bg-sky-700 text-white"
+                                onClick={handleFaceChallenge}
+                                disabled={recording}
+                            >
                                 Bắt đầu xác minh
                             </Button>
 
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={handleFaceCapture}
-                                disabled={!challengeId}
+                                onClick={startRecord3s}
+                                disabled={!challengeId || recording}
                                 title={!challengeId ? "Hãy bấm 'Bắt đầu xác minh' trước" : undefined}
                             >
-                                Chụp ảnh
+                                {recording ? "Đang quay..." : "Quay 3 giây"}
                             </Button>
+
+                            {recording && (
+                                <Button type="button" variant="outline" onClick={stopRecord}>
+                                    Dừng quay
+                                </Button>
+                            )}
 
                             <Button
                                 type="button"
-                                onClick={handleFaceVerify}
-                                disabled={!challengeId || !facePreview}
+                                onClick={handleFaceVerifyVideo}
+                                disabled={!challengeId || !faceVideoBlob || recording}
                                 className="bg-emerald-600 hover:bg-emerald-700 text-white"
                             >
-                                Xác minh
+                                Xác minh video
                             </Button>
                         </div>
 
                         <div className="text-sm text-gray-700 space-y-1">
                             <div>
                                 <b>Bước:</b>{" "}
-                                {steps.length ? <span className="text-gray-700">{steps.join(", ")}</span> : <span className="text-gray-400">-</span>}
+                                {steps.length ? (
+                                    <span className="text-gray-700">{steps.join(", ")}</span>
+                                ) : (
+                                    <span className="text-gray-400">-</span>
+                                )}
                             </div>
                             <div className="flex items-center gap-2">
                                 <b>Trạng thái:</b>
-                                <span className={`${faceVerified ? "text-green-700" : "text-gray-600"}`}>{faceStatus || "-"}</span>
+                                <span className={`${faceVerified ? "text-green-700" : "text-gray-600"}`}>
+                  {faceStatus || "-"}
+                </span>
                             </div>
                         </div>
 
@@ -663,9 +771,13 @@ export default function Step4Payment({
                                 <div className="overflow-hidden rounded-xl bg-black aspect-video">
                                     <Webcam
                                         ref={webcamRef}
-                                        screenshotFormat="image/jpeg"
-                                        screenshotQuality={0.9}
-                                        videoConstraints={{ facingMode: "user", width: 640, height: 480 }}
+                                        audio={false}
+                                        videoConstraints={{
+                                            facingMode: "user",
+                                            width: 640,
+                                            height: 480,
+                                            frameRate: { ideal: 30, max: 30 }, // ✅ tránh fps “ảo”
+                                        }}
                                         className="w-full h-full object-cover"
                                     />
                                 </div>
@@ -673,24 +785,32 @@ export default function Step4Payment({
 
                             <div className="rounded-xl border bg-white p-3">
                                 <div className="flex items-center justify-between mb-2">
-                                    <p className="text-sm font-semibold text-gray-800">Ảnh đã chụp</p>
-                                    {facePreview ? <span className="text-xs text-green-700">Đã có ảnh ✅</span> : <span className="text-xs text-gray-500">Chưa có ảnh</span>}
+                                    <p className="text-sm font-semibold text-gray-800">Video đã quay</p>
+                                    {faceVideoBlob ? (
+                                        <span className="text-xs text-green-700">Đã có video ✅</span>
+                                    ) : (
+                                        <span className="text-xs text-gray-500">Chưa có video</span>
+                                    )}
                                 </div>
                                 <div className="overflow-hidden rounded-xl bg-gray-100 aspect-video flex items-center justify-center">
-                                    {facePreview ? (
-                                        <img src={facePreview} alt="face-preview" className="w-full h-full object-cover" />
+                                    {faceVideoUrl ? (
+                                        <video src={faceVideoUrl} controls className="w-full h-full object-cover" />
                                     ) : (
-                                        <span className="text-sm text-gray-500">Chụp ảnh để xem preview</span>
+                                        <span className="text-sm text-gray-500">Bấm “Quay 3 giây” để tạo video</span>
                                     )}
                                 </div>
                             </div>
                         </div>
 
-                        {!faceVerified && <div className="text-sm text-red-600">Bạn cần xác minh khuôn mặt trước khi có thể tiếp tục.</div>}
+                        {!faceVerified && (
+                            <div className="text-sm text-red-600">
+                                Bạn cần xác minh khuôn mặt trước khi có thể tiếp tục.
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
-                {/* ===== CONTRACT STEP ===== */}
+                {/* ===== CONTRACT STEP (giữ nguyên của bạn) ===== */}
                 {showContractStep && contractId && (
                     <Card className="border-sky-100 shadow-lg">
                         <CardHeader>
@@ -707,7 +827,6 @@ export default function Step4Payment({
                                 <span className="font-semibold">{contractStatus || "DRAFT"}</span>
                             </div>
 
-                            {/* ✅ Preview PDF bằng Blob URL */}
                             <div className="rounded-xl border overflow-hidden">
                                 {pdfUrl ? (
                                     <iframe src={pdfUrl} className="w-full h-[520px]" />
@@ -749,11 +868,11 @@ export default function Step4Payment({
                                     </Button>
                                 )}
 
-                                {signedElectronic && !signedDigital && (
-                                    <Button type="button" onClick={handleSignDigital} disabled={signing} variant="outline">
-                                        {signing ? "Đang ký số..." : "Ký số (B - optional)"}
-                                    </Button>
-                                )}
+                                {/*{signedElectronic && !signedDigital && (*/}
+                                {/*    <Button type="button" onClick={handleSignDigital} disabled={signing} variant="outline">*/}
+                                {/*        {signing ? "Đang ký số..." : "Ký số (B - optional)"}*/}
+                                {/*    </Button>*/}
+                                {/*)}*/}
 
                                 {signedDigital && (
                                     <Button type="button" disabled variant="outline">
