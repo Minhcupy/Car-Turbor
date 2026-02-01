@@ -45,6 +45,10 @@ public class AuthTokenFilter extends OncePerRequestFilter {
         try {
             String jwt = parseJwt(request);
             if (jwt != null && jwtUtil.validateToken(jwt)) {
+                if (!"access".equals(jwtUtil.getTokenType(jwt))) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 String username = jwtUtil.getUsernameFromToken(jwt); // đồng bộ tên hàm
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 

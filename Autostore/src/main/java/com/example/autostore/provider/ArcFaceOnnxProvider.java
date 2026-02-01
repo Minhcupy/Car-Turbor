@@ -90,10 +90,12 @@ public class ArcFaceOnnxProvider implements FaceProvider {
 
         float[] current = extractEmbedding(image); // normalized
         float[] stored = FaceEmbeddingCodec.fromBytes(template.getEmbedding());
-        FaceMath.l2NormalizeInPlace(stored);
+//        FaceMath.l2NormalizeInPlace(stored);
 
         float sim = FaceMath.dot(stored, current); // normalized => dot = cosine
         System.out.println("[ArcFace] cosine=" + sim + " threshold=" + threshold);
+        System.out.println("storedNorm=" + Math.sqrt(FaceMath.dot(stored, stored)));
+        System.out.println("currentNorm=" + Math.sqrt(FaceMath.dot(current, current)));
 
         return sim >= threshold;
     }
@@ -144,6 +146,21 @@ public class ArcFaceOnnxProvider implements FaceProvider {
         // ✅ 4) Quality gate (blur/brightness)
         if (isTooBlurry(crop)) throw new RuntimeException("FACE_BLURRY");
         if (isTooDarkOrBright(crop)) throw new RuntimeException("FACE_BAD_LIGHT");
+        try {
+            // lưu vào uploads/face-debug (tự tạo nếu chưa có)
+            Path dir = Paths.get("uploads", "face-debug");
+            Files.createDirectories(dir);
+
+            String name = "crop_" + System.currentTimeMillis() + ".jpg";
+            Path out = dir.resolve(name);
+
+            ImageIO.write(crop, "jpg", out.toFile());
+
+            System.out.println("Saved crop: " + out.toAbsolutePath()
+                    + " w=" + crop.getWidth() + " h=" + crop.getHeight());
+        } catch (Exception e) {
+            System.out.println("Save crop failed: " + e.getMessage());
+        }
 
         return crop;
     }

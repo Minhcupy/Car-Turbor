@@ -12,6 +12,7 @@ import com.example.autostore.repository.ICustomerRepository;
 import com.example.autostore.repository.RoleRepository;
 import com.example.autostore.repository.UserRepository;
 import com.example.autostore.service.UserDetailsImpl;
+import com.example.autostore.service.user.LoginOtpService;
 import com.example.autostore.service.user.implement.UserService;
 import com.example.autostore.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -41,26 +42,76 @@ public class AuthController {
     private final JwtUtil jwtUtil;
     private final UserService userService;
     private final ICustomerRepository customerRepository;
-
+    private final LoginOtpService loginOtpService;
 
 
 
     // === LOGIN ===
     @PostMapping("/signin")
     public ResponseEntity<?> signin(@RequestBody SignInRequest signInRequest) {
-        Authentication authentication = authenticationManager.authenticate(
+
+        // 1) check username+password bằng AuthenticationManager
+        authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        signInRequest.getUserName(),   // login bằng userName
+                        signInRequest.getUserName(),
                         signInRequest.getPassword()
                 )
         );
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
+        // 2) lấy user để lấy email
+        AppUser user = userRepository.findByUserName(signInRequest.getUserName())
+                .orElseThrow(() -> new RuntimeException("Invalid credentials"));
+
+        // 3) issue OTP + send mail
+        var issue = loginOtpService.issue(user.getUserId(), user.getUserEmail());
+
+        // 4) trả otpToken
+        String otpToken = jwtUtil.generateLoginOtpToken(
+                user.getUserName(),
+                issue.otpId(),
+                issue.expiresInSeconds()
+        );
+
+        return ResponseEntity.ok(new com.example.autostore.dto.SignInOtpResponse(
+                true,
+                otpToken,
+                issue.expiresInSeconds(),
+                maskEmail(user.getUserEmail())
+        ));
+    }
+
+    private String maskEmail(String email) {
+        int at = email.indexOf('@');
+        if (at <= 1) return "***" + email.substring(at);
+        return email.substring(0, 1) + "***" + email.substring(at);
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<?> verifyOtp(@RequestBody com.example.autostore.dto.VerifyOtpRequest req) {
+
+        String otpToken = req.getOtpToken();
+        if (otpToken == null || !jwtUtil.validateToken(otpToken) || !"otp".equals(jwtUtil.getTokenType(otpToken))) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid otpToken");
+        }
+
+        String username = jwtUtil.getUsernameFromToken(otpToken);
+        Long otpId = jwtUtil.getOtpIdFromToken(otpToken);
+
+        AppUser user = userRepository.findByUserName(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // verify OTP (đúng mới pass)
+        loginOtpService.verify(user.getUserId(), otpId, req.getOtp());
+
+        // tạo Authentication từ userDetails để cấp JWT như bạn đang làm trong refresh()
+        UserDetailsImpl userDetails = UserDetailsImpl.build(user);
+        Authentication authentication = new UsernamePasswordAuthenticationToken(
+                userDetails, null, userDetails.getAuthorities()
+        );
 
         String accessToken = jwtUtil.generateAccessToken(authentication);
         String refreshToken = jwtUtil.generateRefreshToken(authentication);
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
         List<String> roles = userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());

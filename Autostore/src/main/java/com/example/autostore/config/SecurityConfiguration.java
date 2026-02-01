@@ -76,12 +76,13 @@ public class SecurityConfiguration {
                                 "/api/reviews/**",
                                 "/swagger-ui/**",
                                 "/v3/api-docs/**",
-                                "/api/brands/**",
+                                "/api/brands/**", 
                                 "/api/user/cars/**",
                                 "/api/user/cars/featured",
                                 "/api/user/bookings/**",
                                 "/api/pricing/**",
-                                "/api/admin/bookings/*/qrcode"
+                                "/api/admin/bookings/*/qrcode",
+                                "api/test/send-mail"
                         ).permitAll()
                         .requestMatchers("/api/face/**").authenticated()
                         .requestMatchers("/error").permitAll()

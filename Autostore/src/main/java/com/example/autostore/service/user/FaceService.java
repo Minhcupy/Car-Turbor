@@ -21,13 +21,14 @@ public class FaceService {
 
     public void enroll(long userId, MultipartFile image) {
         float[] emb = faceProvider.extractEmbedding(image);
-
+        double q = FaceQualityScorer.score(image);
         UserFaceTemplate t = repo.findByUserId(userId).orElseGet(UserFaceTemplate::new);
         t.setUserId(userId);
         t.setEmbedding(FaceEmbeddingCodec.toBytes(emb));
         t.setDim(emb.length);
         t.setModel("arcface_onnx");
         t.setVersion("v1");
+        t.setQualityScore((float) q);
 
         repo.save(t);
     }

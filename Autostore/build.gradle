@@ -38,6 +38,8 @@ dependencies {
     implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
     implementation 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
     implementation 'commons-codec:commons-codec:1.17.0'
+    implementation 'org.springframework.boot:spring-boot-starter-mail'
+    implementation "org.bytedeco:javacv-platform:1.5.10"
 
     implementation 'org.thymeleaf.extras:thymeleaf-extras-springsecurity6'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'

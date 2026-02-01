@@ -50,6 +50,7 @@ public class JwtUtil {
         return Jwts.builder()
                 .setSubject(userPrincipal.getUsername()) // sub
                 .claim("roles", roles)                    // 👈 thêm claim roles
+                .claim("type", "access")
                 .setIssuedAt(now)
                 .setExpiration(expiryDate)
                 .signWith(getSigningKey(), SignatureAlgorithm.HS512)
@@ -61,7 +62,17 @@ public class JwtUtil {
      */
     public String generateRefreshToken(Authentication authentication) {
         UserDetailsImpl userPrincipal = (UserDetailsImpl) authentication.getPrincipal();
-        return buildToken(userPrincipal.getUsername(), refreshExpiration);
+
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + refreshExpiration * 1000);
+
+        return Jwts.builder()
+                .setSubject(userPrincipal.getUsername())
+                .claim("type", "refresh")         // ✅
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .compact();
     }
 
     // Dùng cho refresh token (chỉ chứa subject)
@@ -115,5 +126,39 @@ public class JwtUtil {
     @PostConstruct
     public void init() {
         log.info("JWT secret length = {}", jwtSecret != null ? jwtSecret.length() : -1);
+    }
+
+    public String generateLoginOtpToken(String username, long otpId, long ttlSeconds) {
+        Date now = new Date();
+        Date expiryDate = new Date(now.getTime() + ttlSeconds * 1000);
+
+        return Jwts.builder()
+                .setSubject(username)
+                .claim("type", "otp")
+                .claim("otpId", otpId)
+                .setIssuedAt(now)
+                .setExpiration(expiryDate)
+                .signWith(getSigningKey(), SignatureAlgorithm.HS512)
+                .compact();
+    }
+
+    public String getTokenType(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        Object type = claims.get("type");
+        return type != null ? type.toString() : "";
+    }
+
+    public Long getOtpIdFromToken(String token) {
+        Claims claims = Jwts.parserBuilder()
+                .setSigningKey(getSigningKey())
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+        Object v = claims.get("otpId");
+        return v == null ? null : Long.valueOf(v.toString());
     }
 }
