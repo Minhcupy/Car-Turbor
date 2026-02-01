@@ -4,6 +4,8 @@ import ai.onnxruntime.*;
 import com.example.autostore.model.UserFaceTemplate;
 import com.example.autostore.util.FaceEmbeddingCodec;
 import com.example.autostore.util.FaceMath;
+import org.bytedeco.javacv.FFmpegFrameGrabber;
+import org.bytedeco.javacv.Java2DFrameConverter;
 import org.bytedeco.opencv.opencv_core.*;
 import org.bytedeco.opencv.opencv_objdetect.CascadeClassifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.imageio.ImageIO;
-import java.awt.*;
+import java.awt.Graphics2D;
+import org.bytedeco.javacv.Frame;
+import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.InputStream;
 import java.nio.FloatBuffer;
@@ -57,31 +61,12 @@ public class ArcFaceOnnxProvider implements FaceProvider {
 
     @Override
     public float[] extractEmbedding(MultipartFile image) {
-        if (image == null || image.isEmpty()) throw new RuntimeException("IMAGE_REQUIRED");
         try {
             BufferedImage bi = ImageIO.read(image.getInputStream());
             if (bi == null) throw new RuntimeException("INVALID_IMAGE");
-
-            BufferedImage face = detectAndCropFace(bi);
-            BufferedImage resized = resize(face, 112, 112);
-
-            float[] chw = toCHWNormalized(resized);
-
-            long[] shape = new long[]{1, 3, 112, 112};
-            try (OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(chw), shape)) {
-                try (OrtSession.Result out = session.run(Collections.singletonMap(inputName, inputTensor))) {
-                    Object v = out.get(0).getValue();
-                    float[] emb = flatten(v);   // [512]
-                    FaceMath.l2NormalizeInPlace(emb);
-                    return emb;
-                }
-            }
-
-        } catch (RuntimeException re) {
-            throw re;
-        } catch (Exception e) {
-            throw new RuntimeException("EXTRACT_EMBEDDING_FAILED", e);
-        }
+            return extractEmbeddingFromBufferedImage(bi);
+        } catch (RuntimeException re) { throw re; }
+        catch (Exception e) { throw new RuntimeException("EXTRACT_EMBEDDING_FAILED", e); }
     }
 
     @Override
@@ -98,6 +83,143 @@ public class ArcFaceOnnxProvider implements FaceProvider {
         System.out.println("currentNorm=" + Math.sqrt(FaceMath.dot(current, current)));
 
         return sim >= threshold;
+    }
+
+    @Override
+    public boolean verifyVideo(MultipartFile video, UserFaceTemplate template) {
+        if (video == null || video.isEmpty()) throw new RuntimeException("VIDEO_REQUIRED");
+        if (template == null || template.getEmbedding() == null) throw new RuntimeException("FACE_NOT_ENROLLED");
+
+        float[] stored = FaceEmbeddingCodec.fromBytes(template.getEmbedding());
+        FaceMath.l2NormalizeInPlace(stored);
+
+        Path tmp = null;
+
+        // tune
+        final int minOkFrames = 3;
+        final int needMotionEvents = 2;
+        final double moveThresh = 0.015;  // 1.5% khung hình
+        final double areaThresh = 0.030;  // 3% diện tích tương đối
+
+        try {
+            tmp = Files.createTempFile("face_", ".webm");
+            Files.copy(video.getInputStream(), tmp, StandardCopyOption.REPLACE_EXISTING);
+
+            Java2DFrameConverter converter = new Java2DFrameConverter();
+
+            double bestSim = -1;
+            int okFrames = 0;
+
+            Double prevCx = null, prevCy = null, prevArea = null;
+            int motionEvents = 0;
+
+            int grabbedImages = 0, converted = 0, triedEmbed = 0, sampled = 0;
+
+            try (FFmpegFrameGrabber g = new FFmpegFrameGrabber(tmp.toFile())) {
+                // g.setOption("analyzeduration", "10000000"); // optional: 10s
+                // g.setOption("probesize", "5000000");        // optional
+                g.start();
+
+                long durationUs = g.getLengthInTime(); // microseconds, có thể =0 nhưng không sao
+                int sampleCount = 18;                  // ~18 mẫu
+                long intervalUs = durationUs > 0 ? Math.max(200_000L, durationUs / sampleCount) : 250_000L; // 200-250ms
+                long nextTs = 0;
+
+                Frame f;
+                while ((f = g.grabImage()) != null) {   // ✅ QUAN TRỌNG: grabImage
+                    grabbedImages++;
+
+                    long ts = g.getTimestamp();         // microseconds
+                    if (ts < nextTs) continue;
+                    nextTs = ts + intervalUs;
+                    sampled++;
+
+                    BufferedImage bi = converter.getBufferedImage(f);
+                    if (bi == null) continue;
+                    converted++;
+
+                    // 1) detect rect để tính motion bbox
+                    Rect r;
+                    try {
+                        r = detectSingleFaceRect(bi);
+                    } catch (RuntimeException ex) {
+                        // multi-face -> skip frame
+                        continue;
+                    }
+                    if (r == null) continue;
+
+                    double cx = (r.x() + r.width() / 2.0) / bi.getWidth();
+                    double cy = (r.y() + r.height() / 2.0) / bi.getHeight();
+                    double area = (r.width() * 1.0 * r.height()) / (bi.getWidth() * 1.0 * bi.getHeight());
+
+                    if (prevCx != null) {
+                        double dc = Math.hypot(cx - prevCx, cy - prevCy);
+                        double da = Math.abs(area - prevArea);
+                        if (dc > moveThresh || da > areaThresh) motionEvents++;
+                    }
+                    prevCx = cx; prevCy = cy; prevArea = area;
+
+                    // 2) embedding + verify
+                    float[] emb;
+                    try {
+                        emb = extractEmbeddingFromBufferedImage(bi); // dùng pipeline crop/quality gate của bạn
+                    } catch (RuntimeException ex) {
+                        continue;
+                    }
+                    triedEmbed++;
+
+                    float sim = FaceMath.dot(stored, emb);
+                    bestSim = Math.max(bestSim, sim);
+                    if (sim >= threshold) okFrames++;
+                }
+
+                g.stop();
+            }
+
+            boolean hasMotion = motionEvents >= needMotionEvents;
+
+            System.out.println("[ArcFaceVideo] best=" + bestSim
+                    + " okFrames=" + okFrames
+                    + " motionEvents=" + motionEvents
+                    + " grabbedImages=" + grabbedImages
+                    + " sampled=" + sampled
+                    + " converted=" + converted
+                    + " triedEmbed=" + triedEmbed);
+
+            return okFrames >= minOkFrames && hasMotion;
+
+        } catch (Exception e) {
+            throw new RuntimeException("VERIFY_VIDEO_FAILED", e);
+        } finally {
+            if (tmp != null) try { Files.deleteIfExists(tmp); } catch (Exception ignore) {}
+        }
+    }
+
+    // diff rất đơn giản (không cần OpenCV thêm)
+    private static double simpleFrameDiff(BufferedImage a, BufferedImage b) {
+        int w = Math.min(a.getWidth(), b.getWidth());
+        int h = Math.min(a.getHeight(), b.getHeight());
+        int step = 4; // nhạy hơn
+
+        long sum = 0;
+        long cnt = 0;
+
+        for (int y = 0; y < h; y += step) {
+            for (int x = 0; x < w; x += step) {
+                int pa = a.getRGB(x, y);
+                int pb = b.getRGB(x, y);
+
+                int ra = (pa >> 16) & 0xFF, ga = (pa >> 8) & 0xFF, ba = pa & 0xFF;
+                int rb = (pb >> 16) & 0xFF, gb = (pb >> 8) & 0xFF, bb = pb & 0xFF;
+
+                int ya = (ra * 30 + ga * 59 + ba * 11) / 100;
+                int yb = (rb * 30 + gb * 59 + bb * 11) / 100;
+
+                sum += Math.abs(ya - yb);
+                cnt++;
+            }
+        }
+        return (sum / (double) cnt) / 255.0;
     }
 
     // ===== detect/crop =====
@@ -164,6 +286,32 @@ public class ArcFaceOnnxProvider implements FaceProvider {
 
         return crop;
     }
+
+    private Rect detectSingleFaceRect(BufferedImage bi) {
+        Mat bgr = bufferedImageToMat(bi);
+
+        Mat gray = new Mat();
+        cvtColor(bgr, gray, COLOR_BGR2GRAY);
+        equalizeHist(gray, gray);
+
+        RectVector faces = new RectVector();
+        faceCascade.detectMultiScale(
+                gray, faces,
+                1.1, 10, 0,
+                new Size(110, 110),
+                new Size()
+        );
+
+        if (faces.size() == 0) return null; // không thấy mặt -> skip frame
+
+        if (faces.size() > 1) {
+            // muốn strict thì return null; hoặc throw tùy bạn
+            throw new RuntimeException("MULTI_FACE_NOT_ALLOWED");
+        }
+
+        return pickMostCentralFace(faces, bi.getWidth(), bi.getHeight());
+    }
+
 
     private static BufferedImage resize(BufferedImage src, int w, int h) {
         BufferedImage dst = new BufferedImage(w, h, BufferedImage.TYPE_3BYTE_BGR);
@@ -284,5 +432,22 @@ public class ArcFaceOnnxProvider implements FaceProvider {
 
         // tune: 60-200
         return mean < 60 || mean > 200;
+    }
+
+    private float[] extractEmbeddingFromBufferedImage(BufferedImage bi) {
+        BufferedImage face = detectAndCropFace(bi);
+        BufferedImage resized = resize(face, 112, 112);
+        float[] chw = toCHWNormalized(resized);
+
+        long[] shape = new long[]{1, 3, 112, 112};
+        try (OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(chw), shape);
+             OrtSession.Result out = session.run(Collections.singletonMap(inputName, inputTensor))) {
+            Object v = out.get(0).getValue();
+            float[] emb = flatten(v);
+            FaceMath.l2NormalizeInPlace(emb);
+            return emb;
+        } catch (Exception e) {
+            throw new RuntimeException("EXTRACT_EMBEDDING_FAILED", e);
+        }
     }
 }

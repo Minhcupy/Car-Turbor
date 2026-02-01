@@ -38,4 +38,10 @@ public class FaceService {
                 .orElseThrow(() -> new RuntimeException("FACE_NOT_ENROLLED"));
         return faceProvider.verify(image, t);
     }
+
+    public boolean verifyVideo(long userId, MultipartFile video) {
+        UserFaceTemplate t = repo.findByUserId(userId)
+                .orElseThrow(() -> new RuntimeException("FACE_NOT_ENROLLED"));
+        return faceProvider.verifyVideo(video, t);
+    }
 }

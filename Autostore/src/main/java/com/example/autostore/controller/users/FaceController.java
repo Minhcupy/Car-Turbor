@@ -2,11 +2,13 @@ package com.example.autostore.controller.users;
 
 import com.example.autostore.model.AppUser;
 import com.example.autostore.repository.UserRepository;
+import com.example.autostore.service.UserDetailsImpl;
 import com.example.autostore.service.user.FaceService;
 import com.example.autostore.service.user.FaceVerifiedTokenService;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -87,6 +89,21 @@ public class FaceController {
         String token = tokenService.issue(username, c.action);
         return Map.of("verified", true, "faceVerifiedToken", token);
     }
+
+    @PostMapping(value = "/verify-video", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> verifyVideo(@RequestParam("challengeId") String challengeId,
+                                         @RequestPart("video") MultipartFile video,
+                                         Authentication auth) {
+        long userId = ((UserDetailsImpl) auth.getPrincipal()).getId();
+
+        boolean ok = faceService.verifyVideo(userId, video);
+        if (!ok) return ResponseEntity.status(400).body(Map.of("verified", false));
+
+        // nếu bạn đang dùng token faceVerifiedToken như ảnh chụp:
+        String token = tokenService.issue(String.valueOf(userId), challengeId);
+        return ResponseEntity.ok(Map.of("verified", true, "faceVerifiedToken", token));
+    }
+
 
     private long resolveUserId(String username) {
         AppUser u = userRepository.findByUserName(username)
