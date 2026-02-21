@@ -196,16 +196,28 @@ export default function CarDetailPage() {
               </div>
 
               {/* Nút đặt xe */}
-              <Link href={`/user/booking?carId=${carDetails.carId}&pricingId=${selectedPricingId ?? ""}`} className="flex-1">
-                <Button
-                    className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600
-                   hover:from-blue-700 hover:to-indigo-700 text-white font-semibold 
-                   shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl"
-                    disabled={carDetails.status !== "AVAILABLE" || pricings.length === 0}
-                >
-                  {carDetails.status === "AVAILABLE" ? "Đặt Ngay" : "Không khả dụng"}
-                </Button>
-              </Link>
+              {carDetails.status === "AVAILABLE" && pricings.length > 0 ? (
+                  <Link
+                      href={`/user/booking?carId=${carDetails.carId}&pricingId=${selectedPricingId ?? ""}`}
+                      className="block"
+                  >
+                    <Button
+                        className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600
+                        hover:from-blue-700 hover:to-indigo-700 text-white font-semibold
+                        shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl"
+                    >
+                      Đặt Ngay
+                    </Button>
+                  </Link>
+              ) : (
+                  <Button
+                      className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600
+                      text-white font-semibold shadow-lg rounded-xl opacity-60 cursor-not-allowed"
+                      disabled
+                  >
+                    {pricings.length === 0 ? "Chưa có giá" : "Không khả dụng"}
+                  </Button>
+              )}
 
               <Link
                   href="/user/contact"

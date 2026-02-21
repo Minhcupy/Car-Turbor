@@ -22,7 +22,8 @@ export default function CarCard({ car, viewMode = "grid" }: CarCardProps) {
             prev.includes(carId) ? prev.filter((id) => id !== carId) : [...prev, carId]
         )
     }
-
+// ✅ chỉ disable khi bảo trì
+    const isMaintenance = car.status === "MAINTENANCE"
     // Xác định trạng thái
     const isAvailable = car.status === "AVAILABLE"
 
@@ -89,8 +90,9 @@ export default function CarCard({ car, viewMode = "grid" }: CarCardProps) {
                         </h3>
                         <p className="text-gray-500 font-medium">{car.brandName}</p>
                     </div>
-                    <div className="flex items-center gap-1 bg-yellow-50 px-3 py-1.5 rounded-full border border-yellow-200">
-                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <div
+                        className="flex items-center gap-1 bg-yellow-50 px-3 py-1.5 rounded-full border border-yellow-200">
+                        <Star className="h-4 w-4 fill-yellow-400 text-yellow-400"/>
                         <span className="font-bold text-gray-800">{car.rating.toFixed(1)}</span>
                     </div>
                 </div>
@@ -104,32 +106,40 @@ export default function CarCard({ car, viewMode = "grid" }: CarCardProps) {
 
                 {/* Địa điểm */}
                 <div className="flex items-center gap-2 text-gray-600 mb-4">
-                    <MapPin className="h-4 w-4 text-blue-500" />
+                    <MapPin className="h-4 w-4 text-blue-500"/>
                     <span className="font-medium">{car.location}</span>
                 </div>
 
                 {/* Thông số xe */}
                 <div className="grid grid-cols-3 gap-3 mb-6">
                     <div className="flex items-center gap-2 bg-blue-50 px-3 py-2 rounded-xl border border-blue-100">
-                        <Users className="h-5 w-5 text-blue-600" />
+                        <Users className="h-5 w-5 text-blue-600"/>
                         <span className="font-semibold text-gray-800">{car.seats} chỗ</span>
                     </div>
                     <div className="flex items-center gap-2 bg-purple-50 px-3 py-2 rounded-xl border border-purple-100">
-                        <Settings className="h-5 w-5 text-purple-600" />
+                        <Settings className="h-5 w-5 text-purple-600"/>
                         <span className="font-semibold text-gray-800">{car.transmission || "N/A"}</span>
                     </div>
                 </div>
 
                 {/* Nút hành động */}
                 <div className="flex gap-3">
-                    <Link href={`/user/booking?carId=${car.carId}`} className="flex-1">
+                    {isMaintenance ? (
                         <Button
-                            className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl"
-                            disabled={!isAvailable}
+                            className="flex-1 w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-semibold shadow-lg rounded-xl opacity-60 cursor-not-allowed"
+                            disabled
                         >
-                            {isAvailable ? "Đặt Ngay" : "Không khả dụng"}
+                            Không khả dụng
                         </Button>
-                    </Link>
+                    ) : (
+                        <Link href={`/user/booking?carId=${car.carId}`} className="flex-1">
+                            <Button
+                                className="w-full h-12 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 rounded-xl"
+                            >
+                                Đặt Ngay
+                            </Button>
+                        </Link>
+                    )}
 
                     <Link href={`/user/cars/${car.carId}`}>
                         <Button

@@ -41,7 +41,7 @@ const sidebarItems = [
   { title: "Bookings", href: "/admin/bookings", icon: Calendar },
   { title: "Payments", href: "/admin/payments", icon: CreditCard },
   { title: "Reports", href: "/admin/reports", icon: BarChart3 },
-  { title: "Blog", href: "/admin/blog", icon: FileText },
+  // { title: "Blog", href: "/admin/blog", icon: FileText },
   { title: "Contacts", href: "/admin/contacts", icon: MessageSquare },
   { title: "Settings", href: "/admin/settings", icon: Settings },
 ]
