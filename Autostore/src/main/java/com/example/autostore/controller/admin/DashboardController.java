@@ -4,6 +4,7 @@ import com.example.autostore.dto.admin.*;
 import com.example.autostore.service.admin.implement.DashboardAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -71,5 +72,22 @@ public class DashboardController {
         if ("all".equalsIgnoreCase(carType)) carType = null;
 
         return dashboardService.getDashboardReport(startDate, endDate, brand, carType);
+    }
+
+    @GetMapping(value = "/report/pdf", produces = "application/pdf")
+    public ResponseEntity<byte[]> exportReportPdf(
+            @RequestParam(required = false) String brand,
+            @RequestParam(required = false) String carType,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
+    ) {
+        if ("all".equalsIgnoreCase(brand)) brand = null;
+        if ("all".equalsIgnoreCase(carType)) carType = null;
+
+        byte[] pdf = dashboardService.exportReportPdf(startDate, endDate, brand, carType);
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=dashboard-report.pdf")
+                .body(pdf);
     }
 }

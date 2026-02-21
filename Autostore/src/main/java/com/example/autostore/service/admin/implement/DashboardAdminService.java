@@ -2,10 +2,13 @@ package com.example.autostore.service.admin.implement;
 
 import com.example.autostore.dto.admin.*;
 import com.example.autostore.repository.*;
+import com.example.autostore.service.ContractContentService;
 import com.example.autostore.service.admin.interfaces.IDashboardAdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
@@ -21,7 +24,7 @@ public class DashboardAdminService implements IDashboardAdminService {
     private final ICustomerRepository customerRepository;
     private final IBookingRepository bookingRepository;
     private final IPaymentRepository paymentRepository;
-
+    private final ContractContentService contractContentService;
 
 
     // 📊 Stats Cards
@@ -82,5 +85,33 @@ public class DashboardAdminService implements IDashboardAdminService {
                 .toList();
 
         return new DashboardReportDTO(monthlyRevenue, brandRatio, dailyBookings);
+    }
+
+    public byte[] exportReportPdf(LocalDate startDate, LocalDate endDate, String brand, String carType) {
+        DashboardReportDTO report = getDashboardReport(startDate, endDate, brand, carType);
+        String html = contractContentService.buildReportHtml(report, startDate, endDate, brand, carType);
+
+        try (ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            var builder = new com.openhtmltopdf.pdfboxout.PdfRendererBuilder();
+            builder.useFastMode();
+
+            // ✅ Embed DejaVu fonts (support Vietnamese)
+            InputStream regular = getClass().getResourceAsStream("/fonts/DejaVuSans.ttf");
+            InputStream bold = getClass().getResourceAsStream("/fonts/DejaVuSans-Bold.ttf");
+
+            if (regular == null || bold == null) {
+                throw new IllegalStateException("Missing fonts in /resources/fonts (DejaVuSans.ttf, DejaVuSans-Bold.ttf)");
+            }
+
+            builder.useFont(() -> regular, "DejaVu Sans");
+            builder.useFont(() -> bold, "DejaVu Sans Bold");
+
+            builder.withHtmlContent(html, null);
+            builder.toStream(out);
+            builder.run();
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("EXPORT_PDF_FAILED", e);
+        }
     }
 }
