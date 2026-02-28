@@ -51,4 +51,13 @@ export const paymentApi = {
         })
         return res.data
     },
+
+    async createVnpayUrl(bookingId: number, amountVnd: number) {
+        // gọi endpoint BE vnpay/create-payment (bạn đang có)
+        const res = await api.post<{ paymentUrl: string }>(`/vnpay/create-payment`, {
+            orderId: String(bookingId),
+            amountVnd,
+        })
+        return res.data.paymentUrl
+    },
 }

@@ -536,6 +536,15 @@ export default function Step4Payment({
             setLoading(true)
             setErrorMsg(null)
 
+            // ✅ VNPAY: redirect sang cổng thanh toán
+            if (paymentMethod === "VNPAY") {
+                const amount = viewDeposit // tiền cọc bạn đang tính ở FE
+                const paymentUrl = await paymentApi.createVnpayUrl(booking.bookingId, amount)
+                window.location.href = paymentUrl
+                return
+            }
+
+            // ✅ Các phương thức khác (giữ nguyên)
             const paymentCreated = await paymentApi.createPayment(
                 booking.bookingId,
                 {
