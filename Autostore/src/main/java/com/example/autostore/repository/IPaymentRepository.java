@@ -56,6 +56,8 @@ public interface IPaymentRepository extends JpaRepository<Payment, Integer> {
     // ✅ Doanh thu tháng hiện tại
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE MONTH(p.paymentDate) = MONTH(CURRENT_DATE) AND YEAR(p.paymentDate) = YEAR(CURRENT_DATE) AND p.status = 'SUCCESS'")
     Double sumRevenueThisMonth();
+
+    boolean existsByProviderTxnNo(String providerTxnNo);
     }
 
 

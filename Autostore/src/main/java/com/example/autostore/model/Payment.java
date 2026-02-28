@@ -58,4 +58,6 @@ public class Payment {
     @Column(length = 100)
     private String payerEmail;
 
+    @Column(length = 50, unique = true)
+    private String providerTxnNo; // vnp_TransactionNo
 }

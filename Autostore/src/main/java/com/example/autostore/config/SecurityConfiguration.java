@@ -85,7 +85,7 @@ public class SecurityConfiguration {
                                 "api/test/send-mail"
                         ).permitAll()
                         .requestMatchers("/api/face/**").authenticated()
-                        .requestMatchers("/error").permitAll()
+                        .requestMatchers("/error","/api/vnpay/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/user/contracts/*/download").permitAll()
                         .requestMatchers("/api/user/contracts/**").authenticated()
                         .requestMatchers(HttpMethod.POST, "/api/user/bookings/**").permitAll()
